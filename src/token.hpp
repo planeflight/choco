@@ -6,7 +6,6 @@
 enum class TokenType {
     END = 0,
     INVALID,
-    PREPROCESSOR,
     SYMBOL,
     OPEN_PAREN,
     CLOSE_PAREN,

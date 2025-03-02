@@ -16,6 +16,7 @@ struct Lexer {
     char *text = nullptr;
 
     size_t idx;
+    size_t length;
     size_t line;
     size_t line_start;
 

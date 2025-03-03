@@ -1,104 +1,9 @@
 #include "lexer.hpp"
 
 #include <cstring>
+#include <iostream>
 
 #include "string.hpp"
-
-constexpr static char *keywords[] = {
-    "auto",
-    "break",
-    "case",
-    "char",
-    "const",
-    "continue",
-    "default",
-    "do",
-    "double",
-    "else",
-    "enum",
-    "extern",
-    "for",
-    "goto",
-    "if",
-    "register",
-    "return",
-    "signed",
-    "sizeof",
-    "static",
-    "struct",
-    "switch",
-    "typedef",
-    "union",
-    "unsigned",
-    "volatile",
-    "while",
-    "alignas",
-    "alignof",
-    "and",
-    "and_eq",
-    "asm",
-    "atomic_cancel",
-    "atomic_commit",
-    "atomic_noexcept",
-    "bitand",
-    "bitor",
-    "bool",
-    "catch",
-    "class",
-    "co_await",
-    "co_return",
-    "co_yield",
-    "compl",
-    "concept",
-    "const_cast",
-    "consteval",
-    "constexpr",
-    "constinit",
-    "decltype",
-    "delete",
-    "dynamic_cast",
-    "explicit",
-    "export",
-    "friend",
-    "inline",
-    "mutable",
-    "namespace",
-    "new",
-    "noexcept",
-    "not",
-    "not_eq",
-    "nullptr",
-    "operator",
-    "or",
-    "or_eq",
-    "override",
-    "private",
-    "protected",
-    "public",
-    "reflexpr",
-    "reinterpret_cast",
-    "requires",
-    "static_assert",
-    "static_cast",
-    "synchronized",
-    "template",
-    "this",
-    "thread_local",
-    "throw",
-    "try",
-    "typeid",
-    "typename",
-    "using",
-    "virtual",
-    "wchar_t",
-    "xor",
-    "xor_eq",
-    "#include",
-    "#ifndef",
-    "#ifdef",
-    "#endif",
-    "#else",
-};
 
 constexpr static char *builtin_types[] =
     {"int", "short", "unsigned", "float", "char", "long", "double", "void"};
@@ -217,16 +122,36 @@ Token Lexer::next() {
             token.len++;
         }
 
+        const TokenType type[] = {TokenType::PRINT,
+                                  TokenType::USE,
+                                  TokenType::LET,
+                                  TokenType::IF,
+                                  TokenType::ELSE,
+                                  TokenType::WHILE,
+                                  TokenType::FOR};
+
+        const char *keywords[] = {
+            "print",
+            "use",
+            "let",
+            "if",
+            "else",
+            "while",
+            "for",
+        };
+
         // find keywords
+        size_t i = 0;
         for (const auto &kwd : keywords) {
             size_t start_index = token.text - text;
             // if the first chunk is the keyword and they have the same length
             size_t kwd_len = strlen(kwd);
             if (compare(token.text, kwd_len, kwd, kwd_len) &&
                 kwd_len == token.len) {
-                token.type = TokenType::KEYWORD;
+                token.type = type[i];
                 return token;
             }
+            i++;
         }
 
         // find types
@@ -295,17 +220,18 @@ Token Lexer::next() {
                                      TokenType::SCOPE,
                                      TokenType::AND,
                                      TokenType::OR};
+    size_t j = 0;
     for (const char *op : ops) {
-        size_t i = 0;
         size_t l = strlen(op);
         if (starts_with(op, l)) {
-            token.type = token_types[i++];
+            token.type = token_types[j];
             for (size_t i = 0; i < l; ++i) {
                 chop_char();
             }
             token.len += l;
             return token;
         }
+        j++;
     }
 
     token.type = TokenType::INVALID;

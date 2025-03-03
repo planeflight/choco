@@ -14,6 +14,16 @@ enum class TokenType {
     SEMICOLON,
     KEYWORD,
     TYPE,
+
+    PRINT,
+    USE,
+    LET,
+    IF,
+    ELSE,
+    WHILE,
+    FOR,
+    VARIABLE,
+
     NUMBER,
     STRING,
     COMMENT,
@@ -34,6 +44,8 @@ enum class TokenType {
     AND,
     OR
 };
+
+std::string type_to_string(TokenType type);
 
 struct Token {
     TokenType type;

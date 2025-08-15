@@ -25,6 +25,7 @@ enum class TokenType {
     VARIABLE,
 
     NUMBER,
+    BOOLEAN,
     STRING,
     COMMENT,
     ASSIGNMENT,
@@ -42,7 +43,8 @@ enum class TokenType {
     MOD,
     SCOPE,
     AND,
-    OR
+    OR,
+    COMMA
 };
 
 std::string type_to_string(TokenType type);
@@ -53,5 +55,6 @@ struct Token {
     size_t len = 0;
 
     std::string to_string();
+    std::string content();
 };
 #endif // TOKEN_HPP

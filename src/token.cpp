@@ -1,5 +1,8 @@
 #include "token.hpp"
 
+#include <sstream>
+#include <string>
+
 std::string type_to_string(TokenType type) {
     switch (type) {
         case TokenType::END:
@@ -46,10 +49,20 @@ std::string type_to_string(TokenType type) {
             return "Multiply";
         case TokenType::STRING:
             return "String";
+        case TokenType::COMMA:
+            return "Comma";
+        case TokenType::BOOLEAN:
+            return "Boolean";
     }
     return "";
 }
 
 std::string Token::to_string() {
     return type_to_string(type);
+}
+
+std::string Token::content() {
+    std::stringstream ss;
+    for (int i = 0; i < len; ++i) ss << text[i];
+    return ss.str();
 }

@@ -14,5 +14,6 @@ SET (CMAKE_CXX_FLAGS "-Wall -Wextra -Wcast-qual -Wconversion-null -Wformat-secur
 -std=c++20 -fPIC -g")
 
 include_directories(".")
+include_directories("src/")
 
 add_executable(${PROJECT_NAME} ${SRC})

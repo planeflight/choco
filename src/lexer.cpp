@@ -3,7 +3,8 @@
 #include <cstring>
 #include <iostream>
 
-#include "string.hpp"
+#include "token.hpp"
+#include "util/string.hpp"
 
 constexpr static char *builtin_types[] =
     {"int", "short", "unsigned", "float", "char", "long", "double", "void"};
@@ -80,13 +81,14 @@ Token Lexer::next() {
 
     size_t len = length;
 
-    const char literal_tokens[] = {'(', ')', '{', '}', ';'};
+    const char literal_tokens[] = {'(', ')', '{', '}', ';', ','};
     const TokenType types[] = {TokenType::OPEN_PAREN,
                                TokenType::CLOSE_PAREN,
                                TokenType::OPEN_CURLY,
                                TokenType::CLOSE_CURLY,
-                               TokenType::SEMICOLON};
-    for (size_t i = 0; i < 5; ++i) {
+                               TokenType::SEMICOLON,
+                               TokenType::COMMA};
+    for (size_t i = 0; i < 6; ++i) {
         char c = literal_tokens[i];
         if (c == text[idx]) {
             token.type = types[i];
@@ -128,17 +130,19 @@ Token Lexer::next() {
                                   TokenType::IF,
                                   TokenType::ELSE,
                                   TokenType::WHILE,
-                                  TokenType::FOR};
+                                  TokenType::FOR,
+                                  TokenType::BOOLEAN,
+                                  TokenType::BOOLEAN};
 
-        const char *keywords[] = {
-            "print",
-            "use",
-            "let",
-            "if",
-            "else",
-            "while",
-            "for",
-        };
+        const char *keywords[] = {"print",
+                                  "use",
+                                  "let",
+                                  "if",
+                                  "else",
+                                  "while",
+                                  "for",
+                                  "true",
+                                  "false"};
 
         // find keywords
         size_t i = 0;

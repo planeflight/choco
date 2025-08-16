@@ -22,10 +22,19 @@ class Parser {
     // token traversing
     Token *peek();
     Token *current();
+    Token *previous();
     void advance();
 
     uptr<Expr> parse_expression();
     uptr<ASTNode> parse_statement();
+
+    uptr<Expr> expression();
+    uptr<Expr> equality();
+    uptr<Expr> comparison();
+    uptr<Expr> term();
+    uptr<Expr> factor();
+    uptr<Expr> unary();
+    uptr<Expr> primary();
 
   private:
     std::vector<Token> tokens;

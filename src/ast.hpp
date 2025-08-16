@@ -61,8 +61,11 @@ struct SymbolExpr : public Expr {
 };
 
 struct BinaryExpr : public Expr {
-    uptr<UnaryExpr> left;
-    uptr<UnaryExpr> right;
+    BinaryExpr() : Expr() {
+        type = ASTNodeType::BINARY;
+    }
+    uptr<Expr> left;
+    uptr<Expr> right;
     TokenType op;
 };
 struct VariableDeclaration : public ASTNode {

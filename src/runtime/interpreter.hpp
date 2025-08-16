@@ -2,6 +2,7 @@
 #define RUNTIME_INTERPETER_HPP
 
 #include "ast.hpp"
+#include "runtime/memory.hpp"
 #include "runtime/runtime.hpp"
 #include "runtime/value.hpp"
 #include "token.hpp"
@@ -20,9 +21,9 @@ struct Interpreter {
                 CallExpr *v = dynamic_cast<CallExpr *>(statement);
                 return evaluate_function_call(v);
             }
-            case ASTNodeType::UNARY: {
-                UnaryExpr *v = dynamic_cast<UnaryExpr *>(statement);
-                return evaluate_unary_expr(v);
+            case ASTNodeType::BINARY: {
+                BinaryExpr *v = dynamic_cast<BinaryExpr *>(statement);
+                return evaluate_binary_expr(v);
             }
         }
         UNIMPLEMENTED();
@@ -40,16 +41,8 @@ struct Interpreter {
         UNIMPLEMENTED();
     }
 
-    LiteralValue *evaluate_unary_expr(UnaryExpr *v) {
-        if (v->op == TokenType::MINUS) {
-            if (true) {
-                UNIMPLEMENTED();
-                // return NumValue{-v->right};
-            }
-        }
-        return nullptr;
-    }
-
+    LiteralValue *evaluate_binary_expr(BinaryExpr *v);
+    LiteralValue *evaluate_unary_expr(UnaryExpr *v);
     LiteralValue *evaluate_expr(Expr *expr);
 
     // INFO: predefined STDIO functions
@@ -57,6 +50,7 @@ struct Interpreter {
 
   private:
     Runtime global_runtime;
+    Memory memory;
 };
 
 #endif // RUNTIME_INTERPETER_HPP

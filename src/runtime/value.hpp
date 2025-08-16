@@ -6,7 +6,7 @@
 
 #include "util/util.hpp"
 
-enum class ValueType { NONE, BOOL, NUMBER, STRING, LIST };
+enum class ValueType { NONE = 0, BOOL, NUMBER, STRING, LIST };
 
 struct LiteralValue {
     LiteralValue() = default;
@@ -44,6 +44,11 @@ struct StringValue : public LiteralValue {
     std::string value;
 };
 
+struct ListValue : public LiteralValue {
+    ListValue(const std::vector<LiteralValue *> &literals) : value(literals) {}
+    std::vector<LiteralValue *> value;
+};
+
 inline std::string literal_to_string(LiteralValue &value) {
     switch (value.type) {
         case ValueType::NONE:
@@ -62,6 +67,7 @@ inline std::string literal_to_string(LiteralValue &value) {
         }
     }
     UNIMPLEMENTED();
+    return "";
 }
 
 //

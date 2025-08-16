@@ -7,6 +7,7 @@
 
 struct Lexer {
     Lexer(const std::string &src);
+    ~Lexer();
 
     // gives the next token
     Token next();

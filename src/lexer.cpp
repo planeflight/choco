@@ -15,6 +15,10 @@ Lexer::Lexer(const std::string &src)
     src.copy(text, src.length());
 }
 
+Lexer::~Lexer() {
+    delete[] text;
+}
+
 void Lexer::retokenize() {
     idx = 0;
     line = 0;

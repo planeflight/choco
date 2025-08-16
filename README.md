@@ -14,6 +14,11 @@ Simply using CMake run the following:
 
 ## Features
 
+- [x] Tokenization
+- [x] AST Parser
+- [ ] Interpreter
+- [ ] Garbage Collection
+
 ## Resources
 
 - [Let's Build A Simple Interpreter](https://ruslanspivak.com/lsbasi-part1/)

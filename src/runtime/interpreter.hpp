@@ -10,36 +10,11 @@
 
 struct Interpreter {
     Interpreter();
-    LiteralValue *evaluate(Statement *statement) {
-        switch (statement->type) {
-            case ASTNodeType::VARIABLE_DECLARATION: {
-                VariableDeclaration *v =
-                    dynamic_cast<VariableDeclaration *>(statement);
-                return evaluate_variable_declaration(v);
-            }
-            case ASTNodeType::FUNCTION_CALL: {
-                CallExpr *v = dynamic_cast<CallExpr *>(statement);
-                return evaluate_function_call(v);
-            }
-            case ASTNodeType::BINARY: {
-                BinaryExpr *v = dynamic_cast<BinaryExpr *>(statement);
-                return evaluate_binary_expr(v);
-            }
-        }
-        UNIMPLEMENTED();
-    }
-
+    LiteralValue *evaluate(Statement *statement);
     LiteralValue *evaluate_variable_declaration(VariableDeclaration *v);
 
-    LiteralValue *evaluate_function_call(CallExpr *s) {
-        // TODO: check if function name is user defined
-
-        // check if function name is defined in STD spec
-        if (s->name == "print") {
-            return print(s);
-        }
-        UNIMPLEMENTED();
-    }
+    LiteralValue *evaluate_function_call(CallExpr *s);
+    LiteralValue *evaluate_if_statement(IfExpr *s);
 
     LiteralValue *evaluate_binary_expr(BinaryExpr *v);
     LiteralValue *evaluate_unary_expr(UnaryExpr *v);
@@ -47,6 +22,7 @@ struct Interpreter {
 
     // INFO: predefined STDIO functions
     LiteralValue *print(CallExpr *s);
+    LiteralValue *input(CallExpr *s);
 
   private:
     Runtime global_runtime;

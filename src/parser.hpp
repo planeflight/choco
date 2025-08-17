@@ -26,9 +26,12 @@ class Parser {
     void advance();
 
     uptr<Expr> parse_expression();
-    uptr<ASTNode> parse_statement();
+    uptr<Expr> parse_statement();
+    std::vector<uptr<Statement>> parse_body();
 
     uptr<Expr> expression();
+    uptr<Expr> or_expr();
+    uptr<Expr> and_expr();
     uptr<Expr> equality();
     uptr<Expr> comparison();
     uptr<Expr> term();

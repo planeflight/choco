@@ -1,5 +1,6 @@
 #include "interpreter.hpp"
 
+#include <iostream>
 #include <stdexcept>
 
 #include "ast.hpp"
@@ -8,15 +9,27 @@
 
 Interpreter::Interpreter() {}
 
-LiteralValue *Interpreter::print(CallExpr *s) {
-    if (s->params.size() == 0) {
-        std::cout << "\n";
-    } else {
-        auto *child = s->params.front().get();
-        LiteralValue *v = evaluate_expr(child);
-        std::cout << literal_to_string(*v) << std::endl;
+LiteralValue *Interpreter::evaluate(Statement *statement) {
+    switch (statement->type) {
+        case ASTNodeType::VARIABLE_DECLARATION: {
+            VariableDeclaration *v =
+                dynamic_cast<VariableDeclaration *>(statement);
+            return evaluate_variable_declaration(v);
+        }
+        case ASTNodeType::FUNCTION_CALL: {
+            CallExpr *v = dynamic_cast<CallExpr *>(statement);
+            return evaluate_function_call(v);
+        }
+        case ASTNodeType::IF_STATEMENT: {
+            IfExpr *v = dynamic_cast<IfExpr *>(statement);
+            return evaluate_if_statement(v);
+        }
+        case ASTNodeType::BINARY: {
+            BinaryExpr *v = dynamic_cast<BinaryExpr *>(statement);
+            return evaluate_binary_expr(v);
+        }
     }
-    return memory.get<NoneValue>();
+    UNIMPLEMENTED();
 }
 
 LiteralValue *Interpreter::evaluate_variable_declaration(
@@ -29,6 +42,48 @@ LiteralValue *Interpreter::evaluate_variable_declaration(
     }
     throw std::runtime_error("Error: Variable name '" + name +
                              "' already declared.\n");
+}
+
+LiteralValue *Interpreter::evaluate_function_call(CallExpr *s) {
+    // TODO: check if function name is user defined
+
+    // check if function name is defined in STD spec
+    if (s->name == "print") {
+        return print(s);
+    }
+    if (s->name == "input") {
+        return input(s);
+    }
+    UNIMPLEMENTED();
+}
+
+LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s) {
+    bool run_else = true;
+    auto eval = static_cast<BoolValue *>(evaluate_expr(s->condition.get()));
+    if (eval->value) {
+        run_else = false;
+        for (const auto &s : s->statements) {
+            evaluate(s.get());
+        }
+    } else {
+        for (const auto &elif : s->elif_statements) {
+            eval =
+                static_cast<BoolValue *>(evaluate_expr(elif->condition.get()));
+            if (eval->value) {
+                run_else = false;
+                for (const auto &s : elif->statements) {
+                    evaluate(s.get());
+                }
+                break;
+            }
+        }
+        if (run_else) {
+            for (const auto &s : s->else_statements) {
+                evaluate(s.get());
+            }
+        }
+    }
+    return memory.get<BoolValue>(eval->value);
 }
 
 LiteralValue *Interpreter::evaluate_expr(Expr *expr) {
@@ -52,28 +107,42 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v) {
     auto left = evaluate_expr(v->left.get());
     auto right = evaluate_expr(v->right.get());
     if (left->type == ValueType::NUMBER && right->type == ValueType::NUMBER) {
-        auto left_num_value = static_cast<NumValue *>(left);
-        auto right_num_value = static_cast<NumValue *>(right);
-        NumValue *res = nullptr;
+        auto lval = static_cast<NumValue *>(left);
+        auto rval = static_cast<NumValue *>(right);
+        NumValue *res_num = memory.get<NumValue>(0.0);
+        BoolValue *res_bool = memory.get<BoolValue>(0.0);
+        // arithmetic operators
         if (v->op == TokenType::PLUS) {
-            res = memory.get<NumValue>(left_num_value->value +
-                                       right_num_value->value);
+            res_num->value = lval->value + rval->value;
+            return res_num;
         } else if (v->op == TokenType::MINUS) {
-            res = memory.get<NumValue>(left_num_value->value -
-                                       right_num_value->value);
+            res_num->value = lval->value - rval->value;
+            return res_num;
         } else if (v->op == TokenType::MUL) {
-            res = memory.get<NumValue>(left_num_value->value *
-                                       right_num_value->value);
+            res_num->value = lval->value * rval->value;
+            return res_num;
         } else if (v->op == TokenType::DIV) {
-            if (right_num_value->value != 0.0)
-                res = memory.get<NumValue>(left_num_value->value /
-                                           right_num_value->value);
+            if (rval->value != 0.0)
+                res_num->value = lval->value / rval->value;
             else
-                res = memory.get<NumValue>(0.0);
-        } else {
-            throw new std::runtime_error("Error: Invalid numerical operation.");
+                res_num->value = 0.0;
+            return res_num;
         }
-        return res;
+        // boolean operators
+        else if (v->op == TokenType::LT) {
+            res_bool->value = lval->value < rval->value;
+        } else if (v->op == TokenType::GT) {
+            res_bool->value = lval->value > rval->value;
+        } else if (v->op == TokenType::LOT) {
+            res_bool->value = lval->value <= rval->value;
+        } else if (v->op == TokenType::GOT) {
+            res_bool->value = lval->value >= rval->value;
+        } else if (v->op == TokenType::EQUALS) {
+            res_bool->value = lval->value == rval->value;
+        } else {
+            throw std::runtime_error("Error: Invalid numerical operation.");
+        }
+        return res_bool;
     }
 
     if (left->type == ValueType::STRING && right->type == ValueType::STRING) {
@@ -84,10 +153,75 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v) {
             res = memory.get<StringValue>(lval->value + rval->value);
             return res;
         }
-        throw new std::runtime_error("Error: Invalid string operation.");
+        throw std::runtime_error("Error: Invalid string operation.");
     }
     // TODO: different string concatenation with string + num or string + bool,
     // etc
+    // string concatenation
+    if (left->type == ValueType::STRING && right->type == ValueType::NUMBER) {
+        auto lval = static_cast<StringValue *>(left);
+        auto rval = static_cast<NumValue *>(right);
+        StringValue *res = nullptr;
+        if (v->op == TokenType::PLUS) {
+            res = memory.get<StringValue>(lval->value +
+                                          std::to_string(rval->value));
+            return res;
+        }
+        throw std::runtime_error("Error: Invalid string operation.");
+    }
+    if (left->type == ValueType::NUMBER && right->type == ValueType::STRING) {
+        auto lval = static_cast<NumValue *>(left);
+        auto rval = static_cast<StringValue *>(right);
+        StringValue *res = nullptr;
+        if (v->op == TokenType::PLUS) {
+            res = memory.get<StringValue>(std::to_string(lval->value) +
+                                          rval->value);
+            return res;
+        }
+        throw std::runtime_error("Error: Invalid string operation.");
+    }
+
+    if (left->type == ValueType::STRING && right->type == ValueType::BOOL) {
+        auto lval = static_cast<StringValue *>(left);
+        auto rval = static_cast<BoolValue *>(right);
+        StringValue *res = nullptr;
+        if (v->op == TokenType::PLUS) {
+            res = memory.get<StringValue>(lval->value +
+                                          (rval->value ? "true" : "false"));
+            return res;
+        }
+        throw std::runtime_error("Error: Invalid string operation.");
+    }
+    if (left->type == ValueType::BOOL && right->type == ValueType::STRING) {
+        auto lval = static_cast<BoolValue *>(left);
+        auto rval = static_cast<StringValue *>(right);
+        StringValue *res = nullptr;
+        if (v->op == TokenType::PLUS) {
+            res = memory.get<StringValue>((lval->value ? "true" : "false") +
+                                          rval->value);
+            return res;
+        }
+        throw std::runtime_error("Error: Invalid string operation.");
+    }
+
+    // comparison/boolean operators
+    if (left->type == ValueType::BOOL && right->type == ValueType::BOOL) {
+        auto lval = static_cast<BoolValue *>(left);
+        auto rval = static_cast<BoolValue *>(right);
+        BoolValue *res = memory.get<BoolValue>(false);
+        if (v->op == TokenType::AND) {
+            res->value = lval && rval;
+        } else if (v->op == TokenType::OR) {
+            res->value = lval || rval;
+
+        } else if (v->op == TokenType::EQUALS) {
+            res->value = lval == rval;
+        } else if (v->op == TokenType::NOT_EQUAL) {
+            res->value = lval != rval;
+        }
+        return res;
+    }
+
     return nullptr;
 }
 
@@ -108,4 +242,24 @@ LiteralValue *Interpreter::evaluate_unary_expr(UnaryExpr *v) {
         return res;
     }
     return nullptr;
+}
+
+LiteralValue *Interpreter::print(CallExpr *s) {
+    if (s->params.size() == 0) {
+        std::cout << "\n";
+    } else {
+        auto *child = s->params.front().get();
+        LiteralValue *v = evaluate_expr(child);
+        std::cout << literal_to_string(*v) << std::endl;
+    }
+    return memory.get<NoneValue>();
+}
+
+LiteralValue *Interpreter::input(CallExpr *s) {
+    // print the prompt
+    print(s);
+    // get the different values
+    std::string in;
+    std::cin >> in;
+    return memory.get<StringValue>(in);
 }

@@ -129,9 +129,11 @@ Token Lexer::next() {
         }
 
         const TokenType type[] = {TokenType::PRINT,
+                                  TokenType::INPUT,
                                   TokenType::USE,
                                   TokenType::LET,
                                   TokenType::IF,
+                                  TokenType::ELIF,
                                   TokenType::ELSE,
                                   TokenType::WHILE,
                                   TokenType::FOR,
@@ -139,9 +141,11 @@ Token Lexer::next() {
                                   TokenType::BOOLEAN};
 
         const char *keywords[] = {"print",
+                                  "input",
                                   "use",
                                   "let",
                                   "if",
+                                  "elif",
                                   "else",
                                   "while",
                                   "for",
@@ -196,14 +200,17 @@ Token Lexer::next() {
     }
 
     // find some operators
-    const char *ops[] = {"=",
-                         "!",
-                         "==",
-                         ">",
-                         "<",
+    // WARN: order of == vs = and >= vs >, etc important because it finds this
+    // first so it marks this as the correct operator rather than '=' and
+    // something else
+    const char *ops[] = {"==",
+                         "!=",
+                         "=",
                          ">=",
                          "<=",
-                         "!=",
+                         ">",
+                         "<",
+                         "!",
                          "+",
                          "-",
                          "*",
@@ -212,14 +219,14 @@ Token Lexer::next() {
                          "::",
                          "&&",
                          "||"};
-    const TokenType token_types[] = {TokenType::ASSIGNMENT,
-                                     TokenType::NOT,
-                                     TokenType::EQUALS,
-                                     TokenType::GT,
-                                     TokenType::LT,
+    const TokenType token_types[] = {TokenType::EQUALS,
+                                     TokenType::NOT_EQUAL,
+                                     TokenType::ASSIGNMENT,
                                      TokenType::GOT,
                                      TokenType::LOT,
-                                     TokenType::NOT_EQUAL,
+                                     TokenType::GT,
+                                     TokenType::LT,
+                                     TokenType::NOT,
                                      TokenType::PLUS,
                                      TokenType::MINUS,
                                      TokenType::MUL,

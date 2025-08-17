@@ -53,6 +53,10 @@ std::string type_to_string(TokenType type) {
             return "Comma";
         case TokenType::BOOLEAN:
             return "Boolean";
+        case TokenType::LT:
+            return "Less Than";
+        case TokenType::GT:
+            return "Greater Than";
     }
     return "";
 }

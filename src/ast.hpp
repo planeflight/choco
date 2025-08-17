@@ -12,6 +12,7 @@ enum class ASTNodeType {
     PROGRAM,
     VARIABLE_DECLARATION,
     IF_STATEMENT,
+    ELIF_STATEMENT,
     WHILE_STATEMENT,
     FUNCTION_CALL,
     // expressions
@@ -68,8 +69,8 @@ struct BinaryExpr : public Expr {
     uptr<Expr> right;
     TokenType op;
 };
-struct VariableDeclaration : public ASTNode {
-    VariableDeclaration() : ASTNode() {
+struct VariableDeclaration : public Expr {
+    VariableDeclaration() : Expr() {
         type = ASTNodeType::VARIABLE_DECLARATION;
     }
     std::string name;
@@ -83,6 +84,25 @@ struct CallExpr : public Expr {
     }
     std::vector<uptr<Expr>> params;
     std::string name;
+};
+
+struct ElifExpr : public Expr {
+    ElifExpr() : Expr() {
+        type = ASTNodeType::ELIF_STATEMENT;
+    }
+    uptr<Expr> condition;
+    std::vector<uptr<Statement>> statements;
+};
+
+struct IfExpr : public Expr {
+    IfExpr() : Expr() {
+        type = ASTNodeType::IF_STATEMENT;
+    }
+
+    uptr<Expr> condition;
+    std::vector<uptr<Statement>> statements;
+    std::vector<uptr<ElifExpr>> elif_statements;
+    std::vector<uptr<Statement>> else_statements;
 };
 
 #endif // AST_HPP

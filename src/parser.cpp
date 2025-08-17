@@ -55,10 +55,11 @@ void Parser::advance() {
     idx++;
 }
 
-uptr<ASTNode> Parser::parse_statement() {
-    if (match(TokenType::PRINT)) {
+uptr<Expr> Parser::parse_statement() {
+    if (match(TokenType::PRINT) || match(TokenType::INPUT)) {
         advance();
-        uptr<CallExpr> print = std::make_unique<CallExpr>("print");
+        uptr<CallExpr> print = std::make_unique<CallExpr>(
+            previous()->type == TokenType::PRINT ? "print" : "input");
         expect(TokenType::OPEN_PAREN);
         // add the parameters
         print->params.push_back(expression());
@@ -79,12 +80,79 @@ uptr<ASTNode> Parser::parse_statement() {
         expect(TokenType::SEMICOLON);
         return declaration;
     }
+    if (match(TokenType::IF)) {
+        advance();
+        expect(TokenType::OPEN_PAREN);
+
+        auto if_stmnt = std::make_unique<IfExpr>();
+        if_stmnt->condition = expression();
+
+        expect(TokenType::CLOSE_PAREN);
+        if_stmnt->statements = parse_body();
+        // TODO: ELIF now
+        while (match(TokenType::ELIF)) {
+            advance();
+            if_stmnt->elif_statements.push_back(std::make_unique<ElifExpr>());
+            expect(TokenType::OPEN_PAREN);
+            if_stmnt->elif_statements.back()->condition = expression();
+            expect(TokenType::CLOSE_PAREN);
+            if_stmnt->elif_statements.back()->statements = parse_body();
+        }
+
+        if (match(TokenType::ELSE)) {
+            advance();
+            if_stmnt->else_statements = parse_body();
+        }
+        return if_stmnt;
+    }
     UNIMPLEMENTED();
     return nullptr;
 }
 
+std::vector<uptr<Statement>> Parser::parse_body() {
+    std::vector<uptr<Statement>> statements;
+    expect(TokenType::OPEN_CURLY);
+    while (!match(TokenType::CLOSE_CURLY)) {
+        statements.push_back(parse_statement());
+    }
+    if (statements.size() == 0)
+        throw std::runtime_error("Missing closing '}' brace");
+    advance();
+    return statements;
+}
+
 uptr<Expr> Parser::expression() {
-    return equality();
+    return or_expr();
+}
+
+uptr<Expr> Parser::or_expr() {
+    auto left = and_expr();
+
+    while (match(TokenType::OR)) {
+        advance();
+        auto right = and_expr();
+        auto binary_expr = std::make_unique<BinaryExpr>();
+        binary_expr->left = std::move(left);
+        binary_expr->op = TokenType::OR;
+        binary_expr->right = std::move(right);
+        left = std::move(binary_expr);
+    }
+    return left;
+}
+
+uptr<Expr> Parser::and_expr() {
+    auto left = equality();
+
+    while (match(TokenType::AND)) {
+        advance();
+        auto right = equality();
+        auto binary_expr = std::make_unique<BinaryExpr>();
+        binary_expr->left = std::move(left);
+        binary_expr->op = TokenType::AND;
+        binary_expr->right = std::move(right);
+        left = std::move(binary_expr);
+    }
+    return left;
 }
 
 uptr<Expr> Parser::equality() {
@@ -99,7 +167,7 @@ uptr<Expr> Parser::equality() {
         binary_expr->left = std::move(comp);
         binary_expr->op = op->type;
         binary_expr->right = std::move(right);
-        return binary_expr;
+        comp = std::move(binary_expr);
     }
     return comp;
 }

@@ -16,9 +16,11 @@ enum class TokenType {
     TYPE,
 
     PRINT,
+    INPUT,
     USE,
     LET,
     IF,
+    ELIF,
     ELSE,
     WHILE,
     FOR,

@@ -18,6 +18,7 @@ Simply using CMake run the following:
 - [x] AST Parser
 - [ ] Interpreter
 - [ ] Garbage Collection
+- [x] Java-like String Concatenation
 
 ## Resources
 

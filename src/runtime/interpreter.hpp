@@ -15,10 +15,11 @@ struct Interpreter {
 
     LiteralValue *evaluate_function_call(CallExpr *s);
     LiteralValue *evaluate_if_statement(IfExpr *s);
+    LiteralValue *evaluate_while_statement(WhileExpr *s);
 
+    LiteralValue *evaluate_expr(Expr *expr);
     LiteralValue *evaluate_binary_expr(BinaryExpr *v);
     LiteralValue *evaluate_unary_expr(UnaryExpr *v);
-    LiteralValue *evaluate_expr(Expr *expr);
 
     // INFO: predefined STDIO functions
     LiteralValue *print(CallExpr *s);

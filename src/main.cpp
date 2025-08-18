@@ -30,12 +30,10 @@ int main() {
     // generate the AST
     Parser parser{tokens};
 
-    std::cout << "Evaluating\n\n";
-
-    Interpreter choco;
-
     const std::vector<uptr<Statement>> &ast = parser.parse();
 
+    Interpreter choco;
+    std::cout << "Evaluating\n\n";
     std::cout << "choco >\n";
     for (const auto &s : ast) {
         choco.evaluate(s.get());

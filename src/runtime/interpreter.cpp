@@ -11,6 +11,7 @@ Interpreter::Interpreter() {}
 
 LiteralValue *Interpreter::evaluate(Statement *statement) {
     switch (statement->type) {
+        case ASTNodeType::VARIABLE_REASSIGN:
         case ASTNodeType::VARIABLE_DECLARATION: {
             VariableDeclaration *v =
                 dynamic_cast<VariableDeclaration *>(statement);
@@ -28,6 +29,10 @@ LiteralValue *Interpreter::evaluate(Statement *statement) {
             BinaryExpr *v = dynamic_cast<BinaryExpr *>(statement);
             return evaluate_binary_expr(v);
         }
+        case ASTNodeType::WHILE_STATEMENT: {
+            WhileExpr *v = dynamic_cast<WhileExpr *>(statement);
+            return evaluate_while_statement(v);
+        }
     }
     UNIMPLEMENTED();
 }
@@ -36,22 +41,30 @@ LiteralValue *Interpreter::evaluate_variable_declaration(
     VariableDeclaration *v) {
     // should have caught all syntax/grammar errors
     const auto &name = v->name;
-    if (!global_runtime.exists(name)) {
-        global_runtime.define(name, evaluate_expr(v->value.get()));
-        return memory.get<NoneValue>();
+    if (v->type == ASTNodeType::VARIABLE_DECLARATION) {
+        if (!global_runtime.exists(name)) {
+            global_runtime.define(name, evaluate_expr(v->value.get()));
+            return memory.get<NoneValue>();
+        }
+        throw std::runtime_error("Error: Variable name '" + name +
+                                 "' already declared.\n");
     }
-    throw std::runtime_error("Error: Variable name '" + name +
-                             "' already declared.\n");
+    if (!global_runtime.exists(name)) {
+        throw std::runtime_error("Error: Variable name '" + name +
+                                 "' does not exist!");
+    }
+    global_runtime.define(name, evaluate_expr(v->value.get()));
+    return memory.get<NoneValue>();
 }
 
 LiteralValue *Interpreter::evaluate_function_call(CallExpr *s) {
     // TODO: check if function name is user defined
 
     // check if function name is defined in STD spec
-    if (s->name == "print") {
+    if (s->callee->symbol == "print") {
         return print(s);
     }
-    if (s->name == "input") {
+    if (s->callee->symbol == "input") {
         return input(s);
     }
     UNIMPLEMENTED();
@@ -86,6 +99,19 @@ LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s) {
     return memory.get<BoolValue>(eval->value);
 }
 
+LiteralValue *Interpreter::evaluate_while_statement(WhileExpr *s) {
+    auto eval = static_cast<BoolValue *>(evaluate_expr(s->condition.get()));
+    while (eval->value) {
+        // TODO: break/continue
+        for (const auto &s : s->statements) {
+            evaluate(s.get());
+        }
+        // recalculate eval
+        eval = static_cast<BoolValue *>(evaluate_expr(s->condition.get()));
+    }
+    return memory.get<NoneValue>();
+}
+
 LiteralValue *Interpreter::evaluate_expr(Expr *expr) {
     if (expr->type == ASTNodeType::LITERAL) {
         return static_cast<LiteralExpr *>(expr)->value.get();
@@ -99,6 +125,9 @@ LiteralValue *Interpreter::evaluate_expr(Expr *expr) {
     }
     if (expr->type == ASTNodeType::UNARY) {
         return evaluate_unary_expr(static_cast<UnaryExpr *>(expr));
+    }
+    if (expr->type == ASTNodeType::FUNCTION_CALL) {
+        return evaluate_function_call(static_cast<CallExpr *>(expr));
     }
     return memory.get<NoneValue>();
 }

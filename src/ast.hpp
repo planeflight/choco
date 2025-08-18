@@ -11,6 +11,7 @@ enum class ASTNodeType {
     // statements
     PROGRAM,
     VARIABLE_DECLARATION,
+    VARIABLE_REASSIGN,
     IF_STATEMENT,
     ELIF_STATEMENT,
     WHILE_STATEMENT,
@@ -79,11 +80,11 @@ struct VariableDeclaration : public Expr {
 
 // children: statements
 struct CallExpr : public Expr {
-    CallExpr(const std::string &name) : Expr(), name(name) {
+    CallExpr() : Expr() {
         type = ASTNodeType::FUNCTION_CALL;
     }
+    uptr<SymbolExpr> callee;
     std::vector<uptr<Expr>> params;
-    std::string name;
 };
 
 struct ElifExpr : public Expr {
@@ -103,6 +104,14 @@ struct IfExpr : public Expr {
     std::vector<uptr<Statement>> statements;
     std::vector<uptr<ElifExpr>> elif_statements;
     std::vector<uptr<Statement>> else_statements;
+};
+
+struct WhileExpr : public Expr {
+    WhileExpr() : Expr() {
+        type = ASTNodeType::WHILE_STATEMENT;
+    }
+    uptr<Expr> condition;
+    std::vector<uptr<Statement>> statements;
 };
 
 #endif // AST_HPP

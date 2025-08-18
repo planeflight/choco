@@ -33,7 +33,8 @@ bool Parser::match_peek(TokenType type) {
 
 const std::vector<uptr<Statement>> &Parser::parse() {
     while (current()->type != TokenType::END) {
-        uptr<Statement> s = parse_statement();
+        std::cout << "parsing another statement\n";
+        uptr<Statement> s = declaration();
         statements.push_back(std::move(s));
     }
     return statements;
@@ -55,19 +56,20 @@ void Parser::advance() {
     idx++;
 }
 
-uptr<Expr> Parser::parse_statement() {
-    if (match(TokenType::PRINT) || match(TokenType::INPUT)) {
-        advance();
-        uptr<CallExpr> print = std::make_unique<CallExpr>(
-            previous()->type == TokenType::PRINT ? "print" : "input");
-        expect(TokenType::OPEN_PAREN);
-        // add the parameters
-        print->params.push_back(expression());
-
-        expect(TokenType::CLOSE_PAREN);
-        expect(TokenType::SEMICOLON);
-        return print;
+std::vector<uptr<Statement>> Parser::parse_body() {
+    std::vector<uptr<Statement>> statements;
+    expect(TokenType::OPEN_CURLY);
+    while (!match(TokenType::CLOSE_CURLY)) {
+        statements.push_back(declaration());
     }
+    if (statements.size() == 0)
+        throw std::runtime_error("Missing closing '}' brace");
+    advance();
+    return statements;
+}
+
+uptr<Expr> Parser::declaration() {
+    // variable assignment
     if (match(TokenType::LET)) {
         advance();
         Token *symbol = expect(TokenType::SYMBOL);
@@ -80,6 +82,45 @@ uptr<Expr> Parser::parse_statement() {
         expect(TokenType::SEMICOLON);
         return declaration;
     }
+    // variable reassignment
+    if (match(TokenType::SYMBOL) && match_peek(TokenType::ASSIGNMENT)) {
+        advance();
+        Token *symbol = previous();
+
+        uptr<VariableDeclaration> declaration =
+            std::make_unique<VariableDeclaration>();
+        declaration->name = symbol->content();
+        declaration->type = ASTNodeType::VARIABLE_REASSIGN;
+
+        expect(TokenType::ASSIGNMENT);
+        declaration->value = expression();
+        expect(TokenType::SEMICOLON);
+
+        return declaration;
+    }
+    // pure function calls where primary=function_call so guarantee semicolon
+    // after simplest form: func(p1, p2, ...);
+    if (match(TokenType::SYMBOL) && match_peek(TokenType::OPEN_PAREN)) {
+        auto func_call = expression();
+        expect(TokenType::SEMICOLON);
+        return func_call;
+    }
+    return statement();
+}
+
+uptr<Expr> Parser::statement() {
+    // if (match(TokenType::PRINT) || match(TokenType::INPUT)) {
+    //     advance();
+    //     uptr<CallExpr> print = std::make_unique<CallExpr>(
+    //         previous()->type == TokenType::PRINT ? "print" : "input");
+    //     expect(TokenType::OPEN_PAREN);
+    //     // add the parameters
+    //     print->params.push_back(expression());
+    //
+    //     expect(TokenType::CLOSE_PAREN);
+    //     expect(TokenType::SEMICOLON);
+    //     return print;
+    // }
     if (match(TokenType::IF)) {
         advance();
         expect(TokenType::OPEN_PAREN);
@@ -89,7 +130,7 @@ uptr<Expr> Parser::parse_statement() {
 
         expect(TokenType::CLOSE_PAREN);
         if_stmnt->statements = parse_body();
-        // TODO: ELIF now
+        // elif parsing
         while (match(TokenType::ELIF)) {
             advance();
             if_stmnt->elif_statements.push_back(std::make_unique<ElifExpr>());
@@ -99,26 +140,24 @@ uptr<Expr> Parser::parse_statement() {
             if_stmnt->elif_statements.back()->statements = parse_body();
         }
 
+        // else parsing
         if (match(TokenType::ELSE)) {
             advance();
             if_stmnt->else_statements = parse_body();
         }
         return if_stmnt;
     }
-    UNIMPLEMENTED();
-    return nullptr;
-}
+    if (match(TokenType::WHILE)) {
+        advance();
+        expect(TokenType::OPEN_PAREN);
+        auto while_stmnt = std::make_unique<WhileExpr>();
+        while_stmnt->condition = expression();
 
-std::vector<uptr<Statement>> Parser::parse_body() {
-    std::vector<uptr<Statement>> statements;
-    expect(TokenType::OPEN_CURLY);
-    while (!match(TokenType::CLOSE_CURLY)) {
-        statements.push_back(parse_statement());
+        expect(TokenType::CLOSE_PAREN);
+        while_stmnt->statements = parse_body();
+        return while_stmnt;
     }
-    if (statements.size() == 0)
-        throw std::runtime_error("Missing closing '}' brace");
-    advance();
-    return statements;
+    return expression();
 }
 
 uptr<Expr> Parser::expression() {
@@ -228,7 +267,7 @@ uptr<Expr> Parser::unary() {
         unary_expr->unary = unary(); // recursive unary
         return unary_expr;
     }
-    // must be primary
+    // must be call or primary
     return primary();
 }
 
@@ -237,6 +276,7 @@ uptr<Expr> Parser::primary() {
     // i.e. literals are already evaluated, parentheses are first to be
     // evaluated
     const std::string &curr_content = current()->content();
+
     if (match(TokenType::STRING)) {
         uptr<LiteralExpr> expr = std::make_unique<LiteralExpr>();
         // trim the quotes at the beginning and end
@@ -258,8 +298,13 @@ uptr<Expr> Parser::primary() {
         return expr;
     }
     if (match(TokenType::SYMBOL)) {
-        uptr<SymbolExpr> symbol = std::make_unique<SymbolExpr>(curr_content);
+        auto symbol = std::make_unique<SymbolExpr>(curr_content);
         advance();
+        // function call
+        if (match(TokenType::OPEN_PAREN)) {
+            advance();
+            return finish_call(std::move(symbol));
+        }
         return symbol;
     }
     // parentheses
@@ -269,5 +314,27 @@ uptr<Expr> Parser::primary() {
         expect(TokenType::CLOSE_PAREN);
         return expr;
     }
-    return nullptr;
+    std::cout << curr_content << std::endl;
+    UNIMPLEMENTED();
+}
+
+uptr<Expr> Parser::finish_call(uptr<SymbolExpr> expr) {
+    std::cout << "called\n";
+    std::vector<uptr<Expr>> args;
+    auto advance_wrapper = [&]() -> bool {
+        advance();
+        return true;
+    };
+
+    // if there are args
+    if (!match(TokenType::CLOSE_PAREN)) {
+        do {
+            args.push_back(expression());
+        } while (match(TokenType::COMMA) && advance_wrapper());
+    }
+    expect(TokenType::CLOSE_PAREN);
+    auto call = std::make_unique<CallExpr>();
+    call->callee = std::move(expr);
+    call->params = std::move(args);
+    return call;
 }

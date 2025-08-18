@@ -22,8 +22,6 @@ std::string type_to_string(TokenType type) {
         case TokenType::SEMICOLON:
             return "Semicolon";
 
-        case TokenType::PRINT:
-            return "Print";
         case TokenType::USE:
             return "Use";
         case TokenType::LET:

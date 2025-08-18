@@ -128,9 +128,7 @@ Token Lexer::next() {
             token.len++;
         }
 
-        const TokenType type[] = {TokenType::PRINT,
-                                  TokenType::INPUT,
-                                  TokenType::USE,
+        const TokenType type[] = {TokenType::USE,
                                   TokenType::LET,
                                   TokenType::IF,
                                   TokenType::ELIF,
@@ -140,9 +138,7 @@ Token Lexer::next() {
                                   TokenType::BOOLEAN,
                                   TokenType::BOOLEAN};
 
-        const char *keywords[] = {"print",
-                                  "input",
-                                  "use",
+        const char *keywords[] = {"use",
                                   "let",
                                   "if",
                                   "elif",

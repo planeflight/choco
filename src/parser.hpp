@@ -25,10 +25,10 @@ class Parser {
     Token *previous();
     void advance();
 
-    uptr<Expr> parse_expression();
-    uptr<Expr> parse_statement();
     std::vector<uptr<Statement>> parse_body();
 
+    uptr<Expr> declaration();
+    uptr<Expr> statement();
     uptr<Expr> expression();
     uptr<Expr> or_expr();
     uptr<Expr> and_expr();
@@ -40,6 +40,8 @@ class Parser {
     uptr<Expr> primary();
 
   private:
+    uptr<Expr> finish_call(uptr<SymbolExpr> expr);
+
     std::vector<Token> tokens;
     size_t idx = 0;
 

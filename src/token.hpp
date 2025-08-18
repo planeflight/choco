@@ -15,8 +15,6 @@ enum class TokenType {
     KEYWORD,
     TYPE,
 
-    PRINT,
-    INPUT,
     USE,
     LET,
     IF,

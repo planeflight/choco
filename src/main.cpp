@@ -35,8 +35,7 @@ int main() {
     Interpreter choco;
     std::cout << "Evaluating\n\n";
     std::cout << "choco >\n";
-    for (const auto &s : ast) {
-        choco.evaluate(s.get());
-    }
+    choco.eval(ast);
+
     return 0;
 }

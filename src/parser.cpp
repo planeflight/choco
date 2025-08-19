@@ -33,7 +33,6 @@ bool Parser::match_peek(TokenType type) {
 
 const std::vector<uptr<Statement>> &Parser::parse() {
     while (current()->type != TokenType::END) {
-        std::cout << "parsing another statement\n";
         uptr<Statement> s = declaration();
         statements.push_back(std::move(s));
     }
@@ -105,22 +104,23 @@ uptr<Expr> Parser::declaration() {
         expect(TokenType::SEMICOLON);
         return func_call;
     }
+    // defining a function
+    if (match(TokenType::FUNCTION)) {
+        advance();
+        return function_def();
+    }
+    // return value
+    if (match(TokenType::RETURN)) {
+        advance();
+        auto return_expr = std::make_unique<ReturnExpr>();
+        return_expr->content = expression();
+        expect(TokenType::SEMICOLON);
+        return return_expr;
+    }
     return statement();
 }
 
 uptr<Expr> Parser::statement() {
-    // if (match(TokenType::PRINT) || match(TokenType::INPUT)) {
-    //     advance();
-    //     uptr<CallExpr> print = std::make_unique<CallExpr>(
-    //         previous()->type == TokenType::PRINT ? "print" : "input");
-    //     expect(TokenType::OPEN_PAREN);
-    //     // add the parameters
-    //     print->params.push_back(expression());
-    //
-    //     expect(TokenType::CLOSE_PAREN);
-    //     expect(TokenType::SEMICOLON);
-    //     return print;
-    // }
     if (match(TokenType::IF)) {
         advance();
         expect(TokenType::OPEN_PAREN);
@@ -319,7 +319,6 @@ uptr<Expr> Parser::primary() {
 }
 
 uptr<Expr> Parser::finish_call(uptr<SymbolExpr> expr) {
-    std::cout << "called\n";
     std::vector<uptr<Expr>> args;
     auto advance_wrapper = [&]() -> bool {
         advance();
@@ -337,4 +336,30 @@ uptr<Expr> Parser::finish_call(uptr<SymbolExpr> expr) {
     call->callee = std::move(expr);
     call->params = std::move(args);
     return call;
+}
+
+uptr<Expr> Parser::function_def() {
+    auto func_def = std::make_unique<FunctionDefExpr>();
+    expect(TokenType::SYMBOL);
+    func_def->name = previous()->content();
+    expect(TokenType::OPEN_PAREN);
+
+    auto advance_wrapper = [&]() -> bool {
+        advance();
+        return true;
+    };
+
+    // if there are args
+    if (!match(TokenType::CLOSE_PAREN)) {
+        do {
+            expect(TokenType::SYMBOL);
+            auto param = previous();
+            func_def->params.push_back(param->content());
+        } while (match(TokenType::COMMA) && advance_wrapper());
+    }
+    expect(TokenType::CLOSE_PAREN);
+
+    func_def->statements = parse_body();
+
+    return func_def;
 }

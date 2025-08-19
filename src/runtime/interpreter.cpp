@@ -2,139 +2,220 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 #include "ast.hpp"
+#include "runtime/runtime.hpp"
+#include "runtime/scope.hpp"
 #include "token.hpp"
 #include "value.hpp"
 
 Interpreter::Interpreter() {}
 
-LiteralValue *Interpreter::evaluate(Statement *statement) {
+void Interpreter::eval(const std::vector<uptr<Statement>> &ast) {
+    for (const auto &s : ast) {
+        evaluate(s.get(), &global_scope);
+    }
+}
+
+LiteralValue *Interpreter::evaluate(Statement *statement, Scope *scope) {
     switch (statement->type) {
         case ASTNodeType::VARIABLE_REASSIGN:
         case ASTNodeType::VARIABLE_DECLARATION: {
             VariableDeclaration *v =
                 dynamic_cast<VariableDeclaration *>(statement);
-            return evaluate_variable_declaration(v);
+            return evaluate_variable_declaration(v, scope);
         }
         case ASTNodeType::FUNCTION_CALL: {
             CallExpr *v = dynamic_cast<CallExpr *>(statement);
-            return evaluate_function_call(v);
+            return evaluate_function_call(v, scope);
         }
         case ASTNodeType::IF_STATEMENT: {
             IfExpr *v = dynamic_cast<IfExpr *>(statement);
-            return evaluate_if_statement(v);
+            return evaluate_if_statement(v, scope);
         }
         case ASTNodeType::BINARY: {
             BinaryExpr *v = dynamic_cast<BinaryExpr *>(statement);
-            return evaluate_binary_expr(v);
+            return evaluate_binary_expr(v, scope);
         }
         case ASTNodeType::WHILE_STATEMENT: {
             WhileExpr *v = dynamic_cast<WhileExpr *>(statement);
-            return evaluate_while_statement(v);
+            return evaluate_while_statement(v, scope);
+        }
+        case ASTNodeType::FUNCTION_DEFINITION: {
+            FunctionDefExpr *v = dynamic_cast<FunctionDefExpr *>(statement);
+            return evaluate_function_definition(v, scope);
+        }
+        case ASTNodeType::RETURN_STATEMENT: {
+            ReturnExpr *v = dynamic_cast<ReturnExpr *>(statement);
+            return evaluate_return_statement(v, scope);
         }
     }
+    return nullptr;
     UNIMPLEMENTED();
 }
 
-LiteralValue *Interpreter::evaluate_variable_declaration(
-    VariableDeclaration *v) {
+LiteralValue *Interpreter::evaluate_variable_declaration(VariableDeclaration *v,
+                                                         Scope *scope) {
     // should have caught all syntax/grammar errors
     const auto &name = v->name;
     if (v->type == ASTNodeType::VARIABLE_DECLARATION) {
-        if (!global_runtime.exists(name)) {
-            global_runtime.define(name, evaluate_expr(v->value.get()));
+        if (!global_scope.runtime.var_exists(name)) {
+            global_scope.runtime.var_define(
+                name, evaluate_expr(v->value.get(), scope));
             return memory.get<NoneValue>();
         }
         throw std::runtime_error("Error: Variable name '" + name +
                                  "' already declared.\n");
     }
-    if (!global_runtime.exists(name)) {
-        throw std::runtime_error("Error: Variable name '" + name +
-                                 "' does not exist!");
+    // variable reassignment
+    else {
+        if (!global_scope.runtime.var_exists(name)) {
+            throw std::runtime_error("Error: Variable name '" + name +
+                                     "' does not exist!");
+        }
+        global_scope.runtime.var_define(name,
+                                        evaluate_expr(v->value.get(), scope));
     }
-    global_runtime.define(name, evaluate_expr(v->value.get()));
-    return memory.get<NoneValue>();
+    return nullptr;
 }
 
-LiteralValue *Interpreter::evaluate_function_call(CallExpr *s) {
-    // TODO: check if function name is user defined
-
+LiteralValue *Interpreter::evaluate_function_call(CallExpr *s, Scope *scope) {
     // check if function name is defined in STD spec
     if (s->callee->symbol == "print") {
-        return print(s);
+        return print(s, scope);
     }
     if (s->callee->symbol == "input") {
-        return input(s);
+        return input(s, scope);
     }
+    // check in user-defined functions
+    if (global_scope.runtime.func_exists(s->callee->symbol)) {
+        FunctionDefExpr *function =
+            global_scope.runtime.get_func_value(s->callee->symbol);
+
+        if (function->params.size() != s->params.size()) {
+            throw std::runtime_error(
+                "Error: Function definition '" + s->callee->symbol + "' has " +
+                std::to_string(function->params.size()) +
+                " parameters, but got " + std::to_string(s->params.size()) +
+                " arguments.");
+        }
+
+        // give the values to the parameters
+        Scope local_scope;
+        local_scope.parent = &global_scope;
+        for (int i = 0; i < function->params.size(); ++i) {
+            LiteralValue *val = evaluate_expr(s->params[i].get(), scope);
+            local_scope.runtime.var_define(function->params[i], val);
+            std::cout << function->params[i] << std::endl;
+        }
+        LiteralValue *result;
+        // evaluate the function with the given parameters
+        for (const auto &s : function->statements) {
+            result = evaluate(s.get(), &local_scope);
+            if (result != nullptr) return result;
+        }
+        // TODO: implement return types
+        return nullptr;
+    }
+    return nullptr;
+
     UNIMPLEMENTED();
 }
 
-LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s) {
+LiteralValue *Interpreter::evaluate_function_definition(FunctionDefExpr *s,
+                                                        Scope *scope) {
+    if (!global_scope.runtime.func_exists(s->name)) {
+        global_scope.runtime.func_define(s->name, s);
+        return nullptr;
+    }
+    throw std::runtime_error("Error: Function name '" + s->name +
+                             "' already declared.\n");
+}
+
+LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s, Scope *scope) {
     bool run_else = true;
-    auto eval = static_cast<BoolValue *>(evaluate_expr(s->condition.get()));
+    auto eval =
+        static_cast<BoolValue *>(evaluate_expr(s->condition.get(), scope));
     if (eval->value) {
         run_else = false;
         for (const auto &s : s->statements) {
-            evaluate(s.get());
+            evaluate(s.get(), scope);
         }
     } else {
         for (const auto &elif : s->elif_statements) {
-            eval =
-                static_cast<BoolValue *>(evaluate_expr(elif->condition.get()));
+            eval = static_cast<BoolValue *>(
+                evaluate_expr(elif->condition.get(), scope));
             if (eval->value) {
                 run_else = false;
                 for (const auto &s : elif->statements) {
-                    evaluate(s.get());
+                    evaluate(s.get(), scope);
                 }
                 break;
             }
         }
         if (run_else) {
             for (const auto &s : s->else_statements) {
-                evaluate(s.get());
+                evaluate(s.get(), scope);
             }
         }
     }
-    return memory.get<BoolValue>(eval->value);
+    return nullptr;
 }
 
-LiteralValue *Interpreter::evaluate_while_statement(WhileExpr *s) {
-    auto eval = static_cast<BoolValue *>(evaluate_expr(s->condition.get()));
+LiteralValue *Interpreter::evaluate_while_statement(WhileExpr *s,
+                                                    Scope *scope) {
+    auto eval =
+        static_cast<BoolValue *>(evaluate_expr(s->condition.get(), scope));
     while (eval->value) {
         // TODO: break/continue
         for (const auto &s : s->statements) {
-            evaluate(s.get());
+            evaluate(s.get(), scope);
         }
         // recalculate eval
-        eval = static_cast<BoolValue *>(evaluate_expr(s->condition.get()));
+        eval =
+            static_cast<BoolValue *>(evaluate_expr(s->condition.get(), scope));
     }
-    return memory.get<NoneValue>();
+    return nullptr;
 }
 
-LiteralValue *Interpreter::evaluate_expr(Expr *expr) {
+LiteralValue *Interpreter::evaluate_return_statement(ReturnExpr *s,
+                                                     Scope *scope) {
+    return evaluate_expr(s->content.get(), scope);
+}
+
+LiteralValue *Interpreter::evaluate_expr(Expr *expr, Scope *scope) {
     if (expr->type == ASTNodeType::LITERAL) {
         return static_cast<LiteralExpr *>(expr)->value.get();
     }
     if (expr->type == ASTNodeType::SYMBOL) {
-        return global_runtime.get_variable_value(
-            (static_cast<SymbolExpr *>(expr))->symbol);
+        // check scopes
+        const std::string &name = (static_cast<SymbolExpr *>(expr))->symbol;
+        while (scope != nullptr) {
+            if (scope->runtime.var_exists(name)) {
+                return scope->runtime.get_variable_value(name);
+            }
+            // move up the tree
+            scope = scope->parent;
+        }
+        throw std::runtime_error("Error: Variable '" + name +
+                                 "' is not in scope and does not exist!");
     }
     if (expr->type == ASTNodeType::BINARY) {
-        return evaluate_binary_expr(static_cast<BinaryExpr *>(expr));
+        return evaluate_binary_expr(static_cast<BinaryExpr *>(expr), scope);
     }
     if (expr->type == ASTNodeType::UNARY) {
-        return evaluate_unary_expr(static_cast<UnaryExpr *>(expr));
+        return evaluate_unary_expr(static_cast<UnaryExpr *>(expr), scope);
     }
     if (expr->type == ASTNodeType::FUNCTION_CALL) {
-        return evaluate_function_call(static_cast<CallExpr *>(expr));
+        return evaluate_function_call(static_cast<CallExpr *>(expr), scope);
     }
-    return memory.get<NoneValue>();
+    return nullptr;
 }
 
-LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v) {
-    auto left = evaluate_expr(v->left.get());
-    auto right = evaluate_expr(v->right.get());
+LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
+    auto left = evaluate_expr(v->left.get(), scope);
+    auto right = evaluate_expr(v->right.get(), scope);
     if (left->type == ValueType::NUMBER && right->type == ValueType::NUMBER) {
         auto lval = static_cast<NumValue *>(left);
         auto rval = static_cast<NumValue *>(right);
@@ -254,8 +335,8 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v) {
     return nullptr;
 }
 
-LiteralValue *Interpreter::evaluate_unary_expr(UnaryExpr *v) {
-    auto left = evaluate_expr(v->unary.get());
+LiteralValue *Interpreter::evaluate_unary_expr(UnaryExpr *v, Scope *scope) {
+    auto left = evaluate_expr(v->unary.get(), scope);
     // -<expr>
     if (left->type == ValueType::NUMBER && v->op == TokenType::MINUS) {
         // INFO: don't alter NumValue-> value directly because it might change
@@ -273,20 +354,23 @@ LiteralValue *Interpreter::evaluate_unary_expr(UnaryExpr *v) {
     return nullptr;
 }
 
-LiteralValue *Interpreter::print(CallExpr *s) {
+LiteralValue *Interpreter::print(CallExpr *s, Scope *scope) {
     if (s->params.size() == 0) {
         std::cout << "\n";
     } else {
         auto *child = s->params.front().get();
-        LiteralValue *v = evaluate_expr(child);
-        std::cout << literal_to_string(*v) << std::endl;
+        LiteralValue *v = evaluate_expr(child, scope);
+        if (v)
+            std::cout << literal_to_string(*v) << std::endl;
+        else
+            throw std::runtime_error("Error: Invalid value!");
     }
-    return memory.get<NoneValue>();
+    return nullptr;
 }
 
-LiteralValue *Interpreter::input(CallExpr *s) {
+LiteralValue *Interpreter::input(CallExpr *s, Scope *scope) {
     // print the prompt
-    print(s);
+    print(s, scope);
     // get the different values
     std::string in;
     std::cin >> in;

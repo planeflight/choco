@@ -22,7 +22,9 @@ enum class TokenType {
     ELSE,
     WHILE,
     FOR,
+    FUNCTION,
     VARIABLE,
+    RETURN,
 
     NUMBER,
     BOOLEAN,

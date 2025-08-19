@@ -16,6 +16,9 @@ enum class ASTNodeType {
     ELIF_STATEMENT,
     WHILE_STATEMENT,
     FUNCTION_CALL,
+    FUNCTION_DEFINITION,
+    RETURN_STATEMENT,
+    CLASS_DEFINITION,
     // expressions
     LITERAL,
     BINARY,
@@ -87,6 +90,22 @@ struct CallExpr : public Expr {
     std::vector<uptr<Expr>> params;
 };
 
+struct FunctionDefExpr : public Expr {
+    FunctionDefExpr() : Expr() {
+        type = ASTNodeType::FUNCTION_DEFINITION;
+    }
+    std::string name;
+    std::vector<std::string> params;
+    std::vector<uptr<Statement>> statements;
+};
+
+struct ReturnExpr : public Expr {
+    ReturnExpr() : Expr() {
+        type = ASTNodeType::RETURN_STATEMENT;
+    }
+    uptr<Expr> content;
+};
+
 struct ElifExpr : public Expr {
     ElifExpr() : Expr() {
         type = ASTNodeType::ELIF_STATEMENT;
@@ -112,6 +131,14 @@ struct WhileExpr : public Expr {
     }
     uptr<Expr> condition;
     std::vector<uptr<Statement>> statements;
+};
+
+struct ClassDefinitionExpr : public Expr {
+    ClassDefinitionExpr() : Expr() {
+        type = ASTNodeType::CLASS_DEFINITION;
+    }
+    std::vector<uptr<FunctionDefExpr>> functions;
+    std::vector<uptr<VariableDeclaration>> attributes;
 };
 
 #endif // AST_HPP

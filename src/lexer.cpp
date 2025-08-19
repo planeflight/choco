@@ -135,18 +135,23 @@ Token Lexer::next() {
                                   TokenType::ELSE,
                                   TokenType::WHILE,
                                   TokenType::FOR,
+                                  TokenType::FUNCTION,
+                                  TokenType::RETURN,
                                   TokenType::BOOLEAN,
                                   TokenType::BOOLEAN};
 
-        const char *keywords[] = {"use",
-                                  "let",
-                                  "if",
-                                  "elif",
-                                  "else",
-                                  "while",
-                                  "for",
-                                  "true",
-                                  "false"};
+        const char *keywords[] = {
+            "use",
+            "let",
+            "if",
+            "elif",
+            "else",
+            "while",
+            "for",
+            "confection", // TODO: config file to change keywords
+            "gift",
+            "true",
+            "false"};
 
         // find keywords
         size_t i = 0;

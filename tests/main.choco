@@ -1,12 +1,27 @@
 
-print("WHILE LOOP!!");
 
-let name = input("Give me your name:  ");
-print(name);
+confection parse(age) {
+    if (age >= 18) {
+        gift "You are an adult";
+    } elif (age >= 13) {
+        gift "You are a teen";
+    }
+    gift "You are a kid";
+
+}
+
+confection hi(name, age) {
+    print("Hi " + name + "! You are " + age + " years old!");
+    gift parse(age);
+}
+
+let res = hi("bob", 15);
+print("We were gifted with:  " + res);
+print("WHILE LOOP!!");
 
 let a = 3;
 while (a <= 11) {
     print("Value:  " + a);
     a = a + 2;
 }
-print(print("AFTER!!"));
+print("AFTER!!");

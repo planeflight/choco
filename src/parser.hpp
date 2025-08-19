@@ -41,6 +41,7 @@ class Parser {
 
   private:
     uptr<Expr> finish_call(uptr<SymbolExpr> expr);
+    uptr<Expr> function_def();
 
     std::vector<Token> tokens;
     size_t idx = 0;

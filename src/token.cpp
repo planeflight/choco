@@ -34,6 +34,8 @@ std::string type_to_string(TokenType type) {
             return "While";
         case TokenType::FOR:
             return "For";
+        case TokenType::RETURN:
+            return "Return";
 
         case TokenType::TYPE:
             return "Type";

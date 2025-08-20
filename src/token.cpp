@@ -36,6 +36,8 @@ std::string type_to_string(TokenType type) {
             return "For";
         case TokenType::RETURN:
             return "Return";
+        case TokenType::CLASS:
+            return "Class";
 
         case TokenType::TYPE:
             return "Type";
@@ -57,6 +59,10 @@ std::string type_to_string(TokenType type) {
             return "Less Than";
         case TokenType::GT:
             return "Greater Than";
+        case TokenType::OPEN_BRACKET:
+            return "[";
+        case TokenType::CLOSE_BRACKET:
+            return "]";
     }
     return "";
 }

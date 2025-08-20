@@ -21,6 +21,7 @@ enum class ASTNodeType {
     CLASS_DEFINITION,
     // expressions
     LITERAL,
+    LIST,
     BINARY,
     UNARY,
     SYMBOL
@@ -46,6 +47,13 @@ struct LiteralExpr : public Expr {
         type = ASTNodeType::LITERAL;
     }
     uptr<LiteralValue> value = nullptr;
+};
+
+struct ListExpr : public LiteralExpr {
+    ListExpr() : LiteralExpr() {
+        type = ASTNodeType::LIST;
+    }
+    std::vector<uptr<Expr>> elements;
 };
 
 struct UnaryExpr : public Expr {
@@ -137,6 +145,7 @@ struct ClassDefinitionExpr : public Expr {
     ClassDefinitionExpr() : Expr() {
         type = ASTNodeType::CLASS_DEFINITION;
     }
+    std::string name;
     std::vector<uptr<FunctionDefExpr>> functions;
     std::vector<uptr<VariableDeclaration>> attributes;
 };

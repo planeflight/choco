@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 
+#include "ast.hpp"
 #include "runtime/value.hpp"
 
 Runtime::Runtime() {}
@@ -32,4 +33,18 @@ void Runtime::func_define(const std::string &name, FunctionDefExpr *expr) {
 
 bool Runtime::func_exists(const std::string &name) {
     return functions.contains(name);
+}
+
+ClassDefinitionExpr *Runtime::get_class_value(const std::string &name) {
+    if (class_exists(name)) return class_definitions[name];
+    throw std::runtime_error("Error: Class name: '" + name +
+                             "' does not exist.\n");
+}
+
+void Runtime::class_define(const std::string &name, ClassDefinitionExpr *expr) {
+    class_definitions[name] = expr;
+}
+
+bool Runtime::class_exists(const std::string &name) {
+    return class_definitions.contains(name);
 }

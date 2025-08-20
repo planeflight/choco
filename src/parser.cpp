@@ -71,15 +71,7 @@ uptr<Expr> Parser::declaration() {
     // variable assignment
     if (match(TokenType::LET)) {
         advance();
-        Token *symbol = expect(TokenType::SYMBOL);
-        uptr<VariableDeclaration> declaration =
-            std::make_unique<VariableDeclaration>();
-        declaration->name = symbol->content();
-        expect(TokenType::ASSIGNMENT);
-
-        declaration->value = expression();
-        expect(TokenType::SEMICOLON);
-        return declaration;
+        return var_declaration();
     }
     // variable reassignment
     if (match(TokenType::SYMBOL) && match_peek(TokenType::ASSIGNMENT)) {
@@ -116,6 +108,11 @@ uptr<Expr> Parser::declaration() {
         return_expr->content = expression();
         expect(TokenType::SEMICOLON);
         return return_expr;
+    }
+    // classes
+    if (match(TokenType::CLASS)) {
+        advance();
+        return class_def();
     }
     return statement();
 }
@@ -307,6 +304,27 @@ uptr<Expr> Parser::primary() {
         }
         return symbol;
     }
+    // array
+    if (match(TokenType::OPEN_BRACKET)) {
+        std::cout << "yeah\n";
+        advance();
+        auto expr = std::make_unique<ListExpr>();
+        auto advance_wrapper = [&]() -> bool {
+            advance();
+            return true;
+        };
+
+        // if there are args
+        if (!match(TokenType::CLOSE_BRACKET)) {
+            do {
+                auto list_elem = expression();
+                std::cout << (int)list_elem->type << std::endl;
+                expr->elements.push_back(std::move(list_elem));
+            } while (match(TokenType::COMMA) && advance_wrapper());
+        }
+        expect(TokenType::CLOSE_BRACKET);
+        return expr;
+    }
     // parentheses
     if (match(TokenType::OPEN_PAREN)) {
         advance();
@@ -316,6 +334,18 @@ uptr<Expr> Parser::primary() {
     }
     std::cout << curr_content << std::endl;
     UNIMPLEMENTED();
+}
+
+uptr<VariableDeclaration> Parser::var_declaration() {
+    Token *symbol = expect(TokenType::SYMBOL);
+    uptr<VariableDeclaration> declaration =
+        std::make_unique<VariableDeclaration>();
+    declaration->name = symbol->content();
+    expect(TokenType::ASSIGNMENT);
+
+    declaration->value = expression();
+    expect(TokenType::SEMICOLON);
+    return declaration;
 }
 
 uptr<Expr> Parser::finish_call(uptr<SymbolExpr> expr) {
@@ -338,7 +368,7 @@ uptr<Expr> Parser::finish_call(uptr<SymbolExpr> expr) {
     return call;
 }
 
-uptr<Expr> Parser::function_def() {
+uptr<FunctionDefExpr> Parser::function_def() {
     auto func_def = std::make_unique<FunctionDefExpr>();
     expect(TokenType::SYMBOL);
     func_def->name = previous()->content();
@@ -362,4 +392,30 @@ uptr<Expr> Parser::function_def() {
     func_def->statements = parse_body();
 
     return func_def;
+}
+
+uptr<Expr> Parser::class_def() {
+    auto class_expr = std::make_unique<ClassDefinitionExpr>();
+    expect(TokenType::SYMBOL);
+    class_expr->name = previous()->content();
+
+    expect(TokenType::OPEN_CURLY);
+
+    while (!match(TokenType::CLOSE_CURLY)) {
+        // either member variables
+        if (match(TokenType::LET)) {
+            advance();
+            auto var_decl = var_declaration();
+            class_expr->attributes.push_back(std::move(var_decl));
+        }
+        // or defining a method
+        if (match(TokenType::FUNCTION)) {
+            advance();
+            auto function = function_def();
+            class_expr->functions.push_back(std::move(function));
+        }
+    }
+    advance();
+
+    return class_expr;
 }

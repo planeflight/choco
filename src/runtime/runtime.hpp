@@ -19,11 +19,14 @@ class Runtime {
     void func_define(const std::string &name, FunctionDefExpr *function);
     bool func_exists(const std::string &name);
 
+    ClassDefinitionExpr *get_class_value(const std::string &name);
+    void class_define(const std::string &name, ClassDefinitionExpr *function);
+    bool class_exists(const std::string &name);
+
   private:
     std::unordered_map<std::string, LiteralValue *> variables;
     std::unordered_map<std::string, FunctionDefExpr *> functions;
+    std::unordered_map<std::string, ClassDefinitionExpr *> class_definitions;
 };
-
-class LocalRuntime : public Runtime {};
 
 #endif // RUNTIME_RUNTIME_HPP

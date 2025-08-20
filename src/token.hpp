@@ -11,6 +11,8 @@ enum class TokenType {
     CLOSE_PAREN,
     OPEN_CURLY,
     CLOSE_CURLY,
+    OPEN_BRACKET,
+    CLOSE_BRACKET,
     SEMICOLON,
     KEYWORD,
     TYPE,
@@ -25,6 +27,7 @@ enum class TokenType {
     FUNCTION,
     VARIABLE,
     RETURN,
+    CLASS,
 
     NUMBER,
     BOOLEAN,
@@ -46,7 +49,8 @@ enum class TokenType {
     SCOPE,
     AND,
     OR,
-    COMMA
+    COMMA,
+    DOT
 };
 
 std::string type_to_string(TokenType type);

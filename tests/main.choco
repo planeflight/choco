@@ -1,6 +1,22 @@
 
+box Person {
+    let name = "";
+    let age = 0;
+    let chocolates = 10;
+
+    confection temper(n, a) {
+        name = n;
+        age = a;
+    }
+
+    confection greet(other) {
+        print("Hi " + other + "! Good to meet you! I'm " + name + "!");
+        gift chocolates;
+    }
+}
 
 confection parse(age) {
+    let var = 10;
     if (age >= 18) {
         gift "You are an adult";
     } elif (age >= 13) {
@@ -14,6 +30,9 @@ confection hi(name, age) {
     print("Hi " + name + "! You are " + age + " years old!");
     gift parse(age);
 }
+
+let countries = [ "USA", "France", "Argentina", "Canada"];
+print(countries);
 
 let res = hi("bob", 15);
 print("We were gifted with:  " + res);

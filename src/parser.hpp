@@ -40,8 +40,10 @@ class Parser {
     uptr<Expr> primary();
 
   private:
+    uptr<VariableDeclaration> var_declaration();
     uptr<Expr> finish_call(uptr<SymbolExpr> expr);
-    uptr<Expr> function_def();
+    uptr<FunctionDefExpr> function_def();
+    uptr<Expr> class_def();
 
     std::vector<Token> tokens;
     size_t idx = 0;

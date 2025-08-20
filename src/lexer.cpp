@@ -85,14 +85,17 @@ Token Lexer::next() {
 
     size_t len = length;
 
-    const char literal_tokens[] = {'(', ')', '{', '}', ';', ','};
+    const char literal_tokens[] = {'(', ')', '{', '}', '[', ']', '.', ';', ','};
     const TokenType types[] = {TokenType::OPEN_PAREN,
                                TokenType::CLOSE_PAREN,
                                TokenType::OPEN_CURLY,
                                TokenType::CLOSE_CURLY,
+                               TokenType::OPEN_BRACKET,
+                               TokenType::CLOSE_BRACKET,
+                               TokenType::DOT,
                                TokenType::SEMICOLON,
                                TokenType::COMMA};
-    for (size_t i = 0; i < 6; ++i) {
+    for (size_t i = 0; i < 9; ++i) {
         char c = literal_tokens[i];
         if (c == text[idx]) {
             token.type = types[i];
@@ -137,6 +140,7 @@ Token Lexer::next() {
                                   TokenType::FOR,
                                   TokenType::FUNCTION,
                                   TokenType::RETURN,
+                                  TokenType::CLASS,
                                   TokenType::BOOLEAN,
                                   TokenType::BOOLEAN};
 
@@ -150,6 +154,7 @@ Token Lexer::next() {
             "for",
             "confection", // TODO: config file to change keywords
             "gift",
+            "box",
             "true",
             "false"};
 

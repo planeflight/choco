@@ -19,9 +19,13 @@ struct Interpreter {
     LiteralValue *evaluate_function_call(CallExpr *s, Scope *scope);
     LiteralValue *evaluate_function_definition(FunctionDefExpr *s,
                                                Scope *scope);
+    LiteralValue *evaluate_class_definition(ClassDefinitionExpr *s,
+                                            Scope *scope);
+
     LiteralValue *evaluate_if_statement(IfExpr *s, Scope *scope);
     LiteralValue *evaluate_while_statement(WhileExpr *s, Scope *scope);
     LiteralValue *evaluate_return_statement(ReturnExpr *s, Scope *scope);
+    LiteralValue *evaluate_list(ListExpr *s, Scope *scope);
 
     LiteralValue *evaluate_expr(Expr *expr, Scope *scope);
     LiteralValue *evaluate_binary_expr(BinaryExpr *v, Scope *scope);

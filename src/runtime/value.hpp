@@ -1,12 +1,13 @@
 #ifndef VALUE_HPP
 #define VALUE_HPP
 
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "util/util.hpp"
 
-enum class ValueType { NONE = 0, BOOL, NUMBER, STRING, LIST };
+enum class ValueType { NONE = 0, BOOL, NUMBER, STRING, CLASS, LIST };
 
 struct LiteralValue {
     LiteralValue() = default;
@@ -44,8 +45,15 @@ struct StringValue : public LiteralValue {
     std::string value;
 };
 
+template <typename T>
+struct ObjectValue : public LiteralValue {
+    uptr<T> value;
+};
+
 struct ListValue : public LiteralValue {
-    ListValue(const std::vector<LiteralValue *> &literals) : value(literals) {}
+    ListValue() {
+        type = ValueType::LIST;
+    }
     std::vector<LiteralValue *> value;
 };
 
@@ -64,6 +72,16 @@ inline std::string literal_to_string(LiteralValue &value) {
         case ValueType::STRING: {
             auto &v = static_cast<StringValue &>(value);
             return v.value;
+        }
+        case ValueType::LIST: {
+            auto &v = static_cast<ListValue &>(value);
+            std::stringstream ss;
+            ss << "[";
+            for (int i = 0; i < v.value.size() - 1; ++i) {
+                ss << literal_to_string(*v.value[i]) << ", ";
+            }
+            ss << literal_to_string(*v.value.back()) << "]";
+            return ss.str();
         }
     }
     UNIMPLEMENTED();

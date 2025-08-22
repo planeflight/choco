@@ -2,18 +2,6 @@ cmake_minimum_required(VERSION 3.5)
 
 project(choco)
 
-set(SOURCE_FILES
-    src/main.cpp
-    src/token.cpp
-    src/parser.cpp
-    src/lexer.cpp
-    src/runtime/class.cpp
-    src/runtime/interpreter.cpp
-    src/runtime/memory.cpp
-    src/runtime/runtime.cpp
-    src/runtime/scope.cpp
-)
-
 # autocomplete
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -38,7 +26,7 @@ add_executable(${PROJECT_NAME}
     src/runtime/runtime.cpp
     src/runtime/scope.cpp
     src/util/file.cpp
-    src/util/status.cpp
+    src/util/error.cpp
 )
 
 include(FetchContent)

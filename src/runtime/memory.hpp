@@ -2,6 +2,9 @@
 #define RUNTIME_MEMORY_HPP
 
 #include <vector>
+
+#include "runtime/value.hpp"
+
 // TODO: garbage collection
 class Memory {
   public:
@@ -10,13 +13,16 @@ class Memory {
 
     template <typename T, typename... Args>
     T *get(Args &&...args) {
+        // Compile-time sanity check
+        static_assert(std::is_base_of<LiteralValue, T>::value,
+                      "T not derived from LiteralValue");
         T *ptr = new T(args...);
-        pointers.push_back(static_cast<void *>(ptr));
+        pointers.push_back(ptr);
         return ptr;
     }
 
   private:
-    std::vector<void *> pointers;
+    std::vector<LiteralValue *> pointers;
 };
 
 #endif // RUNTIME_MEMORY_HPP

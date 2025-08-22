@@ -7,7 +7,7 @@
 
 #include "ast.hpp"
 #include "token.hpp"
-#include "util/status.hpp"
+#include "util/error.hpp"
 
 class Parser {
   public:
@@ -17,7 +17,7 @@ class Parser {
     const std::vector<uptr<Statement>> &parse();
 
   private:
-    StatusOr<Token *> expect(TokenType type);
+    Token *expect(TokenType type);
     bool match(TokenType type);
     bool match_peek(TokenType type);
 

@@ -11,6 +11,7 @@
 #include "runtime/runtime.hpp"
 #include "runtime/scope.hpp"
 #include "token.hpp"
+#include "util/error.hpp"
 #include "util/util.hpp"
 #include "value.hpp"
 
@@ -83,8 +84,9 @@ LiteralValue *Interpreter::evaluate_variable_declaration(VariableDeclaration *v,
                                       evaluate_expr(v->value.get(), scope));
             return nullptr;
         }
-        throw std::runtime_error("Error: Variable name '" + name +
-                                 "' already declared.\n");
+        throw Error(
+            Error::NAME_ERROR,
+            fmt::format("Error: Variable name '{}' already declared.", name));
     }
     // variable reassignment
     else {
@@ -94,8 +96,10 @@ LiteralValue *Interpreter::evaluate_variable_declaration(VariableDeclaration *v,
             if (scope->parent != nullptr) {
                 scope = scope->parent;
             } else {
-                throw std::runtime_error("Error: Variable name '" + name +
-                                         "' does not exist!\n");
+                throw Error(
+                    Error::NAME_ERROR,
+                    fmt::format("Error: Variable name '{}' does not exist!\n",
+                                name));
             }
         }
         scope->runtime.var_define(name,
@@ -118,11 +122,12 @@ LiteralValue *Interpreter::evaluate_function_call(CallExpr *s, Scope *scope) {
             global_scope.runtime.get_func_value(s->callee->symbol);
 
         if (function->params.size() != s->params.size()) {
-            throw std::runtime_error(
-                "Error: Function definition '" + s->callee->symbol + "' has " +
-                std::to_string(function->params.size()) +
-                " parameters, but got " + std::to_string(s->params.size()) +
-                " arguments.");
+            throw Error(Error::INVALID_ARGUMENT_ERROR,
+                        fmt::format("Error: Function definition '{}' has {} "
+                                    "parameters but got {} arguments.",
+                                    s->callee->symbol,
+                                    function->params.size(),
+                                    s->params.size()));
         }
 
         // give the values to the parameters in a new scope
@@ -141,8 +146,6 @@ LiteralValue *Interpreter::evaluate_function_call(CallExpr *s, Scope *scope) {
         return nullptr;
     }
     return nullptr;
-
-    UNIMPLEMENTED();
 }
 
 LiteralValue *Interpreter::evaluate_function_definition(FunctionDefExpr *s,
@@ -151,8 +154,9 @@ LiteralValue *Interpreter::evaluate_function_definition(FunctionDefExpr *s,
         global_scope.runtime.func_define(s->name, s);
         return nullptr;
     }
-    throw std::runtime_error("Error: Function name '" + s->name +
-                             "' already declared.\n");
+    throw Error(
+        Error::NAME_ERROR,
+        fmt::format("Error: Function name '{}' already declared.", s->name));
 }
 
 LiteralValue *Interpreter::evaluate_class_definition(ClassDefinitionExpr *s,
@@ -161,8 +165,9 @@ LiteralValue *Interpreter::evaluate_class_definition(ClassDefinitionExpr *s,
         global_scope.runtime.class_define(s->name, s);
         return nullptr;
     }
-    throw std::runtime_error("Error: Class name '" + s->name +
-                             "' already declared.\n");
+    throw Error(
+        Error::NAME_ERROR,
+        fmt::format("Error: Class name '{}' already declared.", s->name));
     return nullptr;
 }
 
@@ -171,8 +176,9 @@ LiteralValue *Interpreter::evaluate_object_instantiation(
     Scope *scope) {
     // check if class name already exists, if not error
     if (!global_scope.runtime.class_exists(s->class_name)) {
-        throw std::runtime_error("Error: Class name '" + s->class_name +
-                                 "' does not exist!");
+        throw Error(Error::NAME_ERROR,
+                    fmt::format("Error: Class name '{}' does not exist.",
+                                s->class_name));
     }
 
     ClassDefinitionExpr *class_definition =
@@ -336,7 +342,9 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
         } else if (v->op == TokenType::EQUALS) {
             res_bool->value = lval->value == rval->value;
         } else {
-            throw std::runtime_error("Error: Invalid numerical operation.");
+            throw Error(
+                Error::TYPE_ERROR,
+                fmt::format("Error: Invalid numerical operation '{}'.", v->op));
         }
         return res_bool;
     }
@@ -349,7 +357,12 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
             res = memory.get<StringValue>(lval->value + rval->value);
             return res;
         }
-        throw std::runtime_error("Error: Invalid string operation.");
+        if (v->op == TokenType::EQUALS) {
+            return memory.get<BoolValue>(lval->value == rval->value);
+        }
+        throw Error(
+            Error::TYPE_ERROR,
+            fmt::format("Error: Invalid string operation '{}'.", v->op));
     }
     // TODO: different string concatenation with string + num or string + bool,
     // etc
@@ -363,7 +376,9 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
                                           std::to_string(rval->value));
             return res;
         }
-        throw std::runtime_error("Error: Invalid string operation.");
+        throw Error(
+            Error::TYPE_ERROR,
+            fmt::format("Error: Invalid string-number operation '{}'.", v->op));
     }
     if (left->type == ValueType::NUMBER && right->type == ValueType::STRING) {
         auto lval = static_cast<NumValue *>(left);
@@ -374,7 +389,9 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
                                           rval->value);
             return res;
         }
-        throw std::runtime_error("Error: Invalid string operation.");
+        throw Error(
+            Error::TYPE_ERROR,
+            fmt::format("Error: Invalid number-string operation '{}'.", v->op));
     }
 
     if (left->type == ValueType::STRING && right->type == ValueType::BOOL) {
@@ -386,7 +403,9 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
                                           (rval->value ? "true" : "false"));
             return res;
         }
-        throw std::runtime_error("Error: Invalid string operation.");
+        throw Error(
+            Error::TYPE_ERROR,
+            fmt::format("Error: Invalid string-bool operation '{}'.", v->op));
     }
     if (left->type == ValueType::BOOL && right->type == ValueType::STRING) {
         auto lval = static_cast<BoolValue *>(left);
@@ -397,7 +416,9 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
                                           rval->value);
             return res;
         }
-        throw std::runtime_error("Error: Invalid string operation.");
+        throw Error(
+            Error::TYPE_ERROR,
+            fmt::format("Error: Invalid bool-string operation '{}'.", v->op));
     }
 
     // comparison/boolean operators
@@ -417,8 +438,8 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
         }
         return res;
     }
-
-    return nullptr;
+    throw Error(Error::TYPE_ERROR,
+                fmt::format("Error: Invalid operation '{}'.", v->op));
 }
 
 LiteralValue *Interpreter::evaluate_unary_expr(UnaryExpr *v, Scope *scope) {
@@ -458,11 +479,12 @@ LiteralValue *Interpreter::evaluate_dot_expr(DotExpr *s, Scope *scope) {
                     obj = static_cast<ObjectValue *>(to_return);
                 }
             } else {
-                throw std::runtime_error(
-                    "Failed to find symbol after dot expression.");
+                throw Error(Error::NAME_ERROR,
+                            "Failed to find symbol after dot expression.");
             }
         } else {
-            UNIMPLEMENTED();
+            throw Error(Error::SYNTAX_ERROR,
+                        "Invalid function call dot expression.");
         }
     }
 
@@ -476,8 +498,9 @@ LiteralValue *Interpreter::get_variable(const std::string &s, Scope *scope) {
         } // move up the tree
         scope = scope->parent;
     }
-    throw std::runtime_error("Error: Variable '" + s +
-                             "' is not in scope and does not exist!");
+    throw Error(
+        Error::NAME_ERROR,
+        fmt::format("Variable '{}' is not in scope and does not exist!", s));
 }
 
 LiteralValue *Interpreter::print(CallExpr *s, Scope *scope) {
@@ -489,7 +512,7 @@ LiteralValue *Interpreter::print(CallExpr *s, Scope *scope) {
         if (v) {
             fmt::println("{}", literal_to_string(*v));
         } else
-            throw std::runtime_error("Error: Invalid value!");
+            throw Error(Error::ARGUMENT_ERROR, "Error: Invalid value!");
     }
     return nullptr;
 }

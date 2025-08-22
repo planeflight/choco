@@ -7,9 +7,9 @@
 #include <sstream>
 #include <string>
 
-#include "util/status.hpp"
+#include "util/error.hpp"
 
-StatusOr<std::string> load_file(const std::string &file_name) {
+std::string load_file(const std::string &file_name) {
     std::ifstream t(file_name);
     if (t) {
         std::stringstream buffer;
@@ -17,11 +17,6 @@ StatusOr<std::string> load_file(const std::string &file_name) {
         std::string source = buffer.str();
         return source;
     }
-    return StatusOr<std::string>(
-        Status::Code::FILE_NOT_FOUND_ERROR,
-        fmt::format("File '{}' could not be found.", file_name));
-}
-
-void Status::output_error() const {
-    fmt::print(stderr, "{}", *this);
+    throw Error(Error::Code::FILE_NOT_FOUND_ERROR,
+                fmt::format("File '{}' could not be found.", file_name));
 }

@@ -3,7 +3,8 @@
 Memory::Memory() {}
 
 Memory::~Memory() {
-    for (int i = 0; i < pointers.size(); ++i) {
-        delete pointers[i];
+    while (pointers.size() > 0) {
+        delete pointers.back();
+        pointers.pop_back();
     }
 }

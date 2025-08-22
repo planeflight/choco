@@ -7,16 +7,17 @@
 #include "ast.hpp"
 #include "runtime/value.hpp"
 #include "token.hpp"
+#include "util/error.hpp"
 #include "util/util.hpp"
 
 Parser::Parser(const std::vector<Token> &tokens) : tokens(tokens) {}
 
 Parser::~Parser() {}
 
-StatusOr<Token *> Parser::expect(TokenType type) {
+Token *Parser::expect(TokenType type) {
     if (!match(type))
-        return StatusOr<Token *>(
-            Status::SYNTAX_ERROR,
+        throw Error(
+            Error::SYNTAX_ERROR,
             fmt::format(
                 "Expected {} but got {} instead.", type, current()->type));
 
@@ -288,8 +289,8 @@ uptr<Expr> Parser::postfix() {
         // must be symbol
         auto left = primary();
         if (left->type == ASTNodeType::LITERAL)
-            throw std::runtime_error(
-                "Literal Types cannot have postfix '.' operator");
+            throw Error(Error::TYPE_ERROR,
+                        "Literal Types cannot have postfix '.' operator");
 
         dot_expr->after.push_back(std::move(left));
 
@@ -380,14 +381,12 @@ uptr<Expr> Parser::primary() {
         expect(TokenType::CLOSE_PAREN);
         return expr;
     }
-    fmt::println("{}", curr_content);
-    UNIMPLEMENTED();
+    throw Error(Error::SYNTAX_ERROR,
+                fmt::format("Invalid syntax: '{}'", curr_content));
 }
 
 uptr<VariableDeclaration> Parser::var_declaration() {
-    StatusOr<Token *> symbol = expect(TokenType::SYMBOL);
-    if (!symbol.ok()) { // TODO
-    }
+    Token *symbol = expect(TokenType::SYMBOL);
 
     uptr<VariableDeclaration> declaration =
         std::make_unique<VariableDeclaration>();

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "util/error.hpp"
 #include "util/util.hpp"
 
 enum class ValueType { NONE = 0, BOOL, NUMBER, STRING, CLASS, LIST, OBJECT };
@@ -32,7 +33,7 @@ struct BoolValue : public LiteralValue {
 
     void operator=(LiteralValue &other) override {
         if (other.type != ValueType::BOOL) {
-            throw std::runtime_error("Cannot assign different types");
+            throw Error(Error::TYPE_ERROR, "Cannot assign different types");
         }
         value = static_cast<BoolValue &>(other).value;
     }
@@ -45,7 +46,7 @@ struct NumValue : public LiteralValue {
     }
     void operator=(LiteralValue &other) override {
         if (other.type != ValueType::NUMBER) {
-            throw std::runtime_error("Cannot assign different types");
+            throw Error(Error::TYPE_ERROR, "Cannot assign different types");
         }
         value = static_cast<NumValue &>(other).value;
     }
@@ -60,7 +61,7 @@ struct StringValue : public LiteralValue {
 
     void operator=(LiteralValue &other) override {
         if (other.type != ValueType::STRING) {
-            throw std::runtime_error("Cannot assign different types");
+            throw Error(Error::TYPE_ERROR, "Cannot assign different types");
         }
         value = static_cast<StringValue &>(other).value;
     }
@@ -74,7 +75,7 @@ struct ObjectValue : public LiteralValue {
     }
     void operator=(LiteralValue &other) override {
         if (other.type != ValueType::OBJECT) {
-            throw std::runtime_error("Cannot assign different types");
+            throw Error(Error::TYPE_ERROR, "Cannot assign different types");
         }
         // reset values and copy everything according to copy or reference rules
         values.clear();
@@ -93,7 +94,7 @@ struct ListValue : public LiteralValue {
     }
     void operator=(LiteralValue &other) override {
         if (other.type != ValueType::LIST) {
-            throw std::runtime_error("Cannot assign different types");
+            throw Error(Error::TYPE_ERROR, "Cannot assign different types");
         }
         auto list = static_cast<ListValue &>(other);
 

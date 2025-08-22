@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "util/status.hpp"
+#include "util/error.hpp"
 
-StatusOr<std::string> load_file(const std::string &file_name);
+std::string load_file(const std::string &file_name);
 
 #endif // UTIL_FILE_HPP

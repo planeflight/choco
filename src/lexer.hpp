@@ -13,6 +13,7 @@ struct Lexer {
     Token next();
     void retokenize();
 
+  private:
     // this is text
     char *text = nullptr;
 
@@ -21,7 +22,6 @@ struct Lexer {
     size_t line;
     size_t line_start;
 
-  private:
     void trim_left();
     char chop_char();
     bool starts_with(const char *prefix, size_t prefix_len);

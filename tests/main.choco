@@ -1,8 +1,13 @@
 
+box ChocolateBox {
+    let type = "Ganache";
+    let count = 10;
+}
+
 box Person {
     let name = "Steve";
     let age = 8;
-    let chocolates = 10;
+    let choc = new ChocolateBox();
 }
 
 confection parse(age) {
@@ -17,7 +22,7 @@ confection parse(age) {
 }
 
 confection hi(guy) {
-    print("Hi " + guy.name + "! You are " + guy.age + " years old!");
+    print(guy.name + " has " + guy.choc.count + " " + guy.choc.type + " chocolates!");
     gift parse(guy.age);
 }
 
@@ -26,12 +31,19 @@ print(countries);
 
 let dude = new Person();
 let res = hi(dude);
-
 print("We were gifted with:  " + res);
+
+let dude2 = dude;
+dude2.name = "Adam";
+hi(dude);
+hi(dude2);
+
 print("WHILE LOOP!!");
 
 let a = 3;
 while (a <= 11) {
+    let c = 5;
+    c = 10;
     print("Value:  " + a);
     a = a + 2;
 }

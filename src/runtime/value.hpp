@@ -2,6 +2,7 @@
 #define VALUE_HPP
 
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -14,12 +15,14 @@ struct LiteralValue {
     LiteralValue() = default;
     virtual ~LiteralValue() = default;
     ValueType type;
+    virtual void operator=(LiteralValue &other) = 0;
 };
 
 struct NoneValue : public LiteralValue {
     NoneValue() {
         type = ValueType::NONE;
     }
+    void operator=(LiteralValue &other) override {}
 };
 
 struct BoolValue : public LiteralValue {
@@ -27,12 +30,24 @@ struct BoolValue : public LiteralValue {
         type = ValueType::BOOL;
     }
 
+    void operator=(LiteralValue &other) override {
+        if (other.type != ValueType::BOOL) {
+            throw std::runtime_error("Cannot assign different types");
+        }
+        value = static_cast<BoolValue &>(other).value;
+    }
     bool value;
 };
 
 struct NumValue : public LiteralValue {
     NumValue(double value) : value(value) {
         type = ValueType::NUMBER;
+    }
+    void operator=(LiteralValue &other) override {
+        if (other.type != ValueType::NUMBER) {
+            throw std::runtime_error("Cannot assign different types");
+        }
+        value = static_cast<NumValue &>(other).value;
     }
 
     double value;
@@ -43,6 +58,13 @@ struct StringValue : public LiteralValue {
         type = ValueType::STRING;
     }
 
+    void operator=(LiteralValue &other) override {
+        if (other.type != ValueType::STRING) {
+            throw std::runtime_error("Cannot assign different types");
+        }
+        value = static_cast<StringValue &>(other).value;
+    }
+
     std::string value;
 };
 
@@ -50,6 +72,18 @@ struct ObjectValue : public LiteralValue {
     ObjectValue() {
         type = ValueType::OBJECT;
     }
+    void operator=(LiteralValue &other) override {
+        if (other.type != ValueType::OBJECT) {
+            throw std::runtime_error("Cannot assign different types");
+        }
+        // reset values and copy everything according to copy or reference rules
+        values.clear();
+        auto obj = static_cast<ObjectValue &>(other);
+        for (const auto &[key, val] : obj.values) {
+            values[key] = val;
+        }
+    }
+
     std::unordered_map<std::string, LiteralValue *> values;
 };
 
@@ -57,6 +91,19 @@ struct ListValue : public LiteralValue {
     ListValue() {
         type = ValueType::LIST;
     }
+    void operator=(LiteralValue &other) override {
+        if (other.type != ValueType::LIST) {
+            throw std::runtime_error("Cannot assign different types");
+        }
+        auto list = static_cast<ListValue &>(other);
+
+        value.clear();
+        value.reserve(list.value.size());
+        for (const auto &elem : list.value) {
+            value.push_back(elem); // pass by reference
+        }
+    }
+
     std::vector<LiteralValue *> value;
 };
 

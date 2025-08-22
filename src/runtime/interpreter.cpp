@@ -11,6 +11,7 @@
 #include "runtime/runtime.hpp"
 #include "runtime/scope.hpp"
 #include "token.hpp"
+#include "util/util.hpp"
 #include "value.hpp"
 
 Interpreter::Interpreter() {}
@@ -58,6 +59,11 @@ LiteralValue *Interpreter::evaluate(Statement *statement, Scope *scope) {
                 dynamic_cast<ClassDefinitionExpr *>(statement);
             return evaluate_class_definition(v, scope);
         }
+        case ASTNodeType::OBJECT_ATTR_REASSIGN: {
+            ObjectAttrReassignExpr *v =
+                dynamic_cast<ObjectAttrReassignExpr *>(statement);
+            return evaluate_object_attr_reassign(v, scope);
+        }
         case ASTNodeType::LIST: {
             ListExpr *v = dynamic_cast<ListExpr *>(statement);
             return evaluate_list(v, scope);
@@ -70,7 +76,6 @@ LiteralValue *Interpreter::evaluate(Statement *statement, Scope *scope) {
 LiteralValue *Interpreter::evaluate_variable_declaration(VariableDeclaration *v,
                                                          Scope *scope) {
     // should have caught all syntax/grammar errors
-    // TODO: define the variable at the appropriate scope
     const auto &name = v->name;
     if (v->type == ASTNodeType::VARIABLE_DECLARATION) {
         if (!scope->runtime.var_exists(name)) {
@@ -83,12 +88,18 @@ LiteralValue *Interpreter::evaluate_variable_declaration(VariableDeclaration *v,
     }
     // variable reassignment
     else {
-        if (!global_scope.runtime.var_exists(name)) {
-            throw std::runtime_error("Error: Variable name '" + name +
-                                     "' does not exist!");
+        // track the original scope for evaluation of expression
+        Scope *curr_scope = scope;
+        while (!scope->runtime.var_exists(name)) {
+            if (scope->parent != nullptr) {
+                scope = scope->parent;
+            } else {
+                throw std::runtime_error("Error: Variable name '" + name +
+                                         "' does not exist!\n");
+            }
         }
-        global_scope.runtime.var_define(name,
-                                        evaluate_expr(v->value.get(), scope));
+        scope->runtime.var_define(name,
+                                  evaluate_expr(v->value.get(), curr_scope));
     }
     return nullptr;
 }
@@ -175,23 +186,12 @@ LiteralValue *Interpreter::evaluate_object_instantiation(
     return new_obj_value;
 }
 
-LiteralValue *Interpreter::evaluate_dot_expr(DotExpr *e, Scope *scope) {
-    const std::string &beginning = e->symbol;
-
-    while (scope != nullptr) {
-        if (scope->runtime.var_exists(beginning)) {
-            ObjectValue *v = static_cast<ObjectValue *>(
-                scope->runtime.get_variable_value(beginning));
-            // TODO: recurse for all dots
-            if (v->values[e->after->symbol]) {
-                LiteralValue *value = v->values[e->after->symbol];
-                return value;
-            }
-        }
-        // move up the tree
-        scope = scope->parent;
-    }
-    throw std::runtime_error("Invalid dot expression!");
+LiteralValue *Interpreter::evaluate_object_attr_reassign(
+    ObjectAttrReassignExpr *s,
+    Scope *scope) {
+    LiteralValue *eval_dot =
+        evaluate_dot_expr(static_cast<DotExpr *>(s->head.get()), scope);
+    *eval_dot = *evaluate_expr(s->right.get(), scope);
     return nullptr;
 }
 
@@ -201,20 +201,21 @@ LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s, Scope *scope) {
         static_cast<BoolValue *>(evaluate_expr(s->condition.get(), scope));
     if (eval->value) {
         run_else = false;
-        Scope new_scope;
-        new_scope.parent = scope;
 
         for (const auto &s : s->statements) {
+            Scope new_scope;
+            new_scope.parent = scope;
             evaluate(s.get(), &new_scope);
         }
     } else {
         for (const auto &elif : s->elif_statements) {
-            Scope new_scope;
-            new_scope.parent = scope;
-
             eval = static_cast<BoolValue *>(
-                evaluate_expr(elif->condition.get(), &new_scope));
+                evaluate_expr(elif->condition.get(), scope));
             if (eval->value) {
+                // new scope for each elif
+                Scope new_scope;
+                new_scope.parent = scope;
+
                 run_else = false;
                 for (const auto &s : elif->statements) {
                     evaluate(s.get(), &new_scope);
@@ -237,9 +238,9 @@ LiteralValue *Interpreter::evaluate_while_statement(WhileExpr *s,
                                                     Scope *scope) {
     auto eval =
         static_cast<BoolValue *>(evaluate_expr(s->condition.get(), scope));
-    Scope new_scope;
-    new_scope.parent = scope;
     while (eval->value) {
+        Scope new_scope;
+        new_scope.parent = scope;
         // TODO: break/continue
         for (const auto &s : s->statements) {
             evaluate(s.get(), &new_scope);
@@ -277,7 +278,6 @@ LiteralValue *Interpreter::evaluate_expr(Expr *expr, Scope *scope) {
         const std::string &name = (static_cast<SymbolExpr *>(expr))->symbol;
         return get_variable(name, scope);
     }
-    // TODO: make variable looking for scope modular func
     if (expr->type == ASTNodeType::DOT_SYMBOL) {
         // check scopes
         auto dot = static_cast<DotExpr *>(expr);
@@ -438,6 +438,35 @@ LiteralValue *Interpreter::evaluate_unary_expr(UnaryExpr *v, Scope *scope) {
         return res;
     }
     return nullptr;
+}
+
+LiteralValue *Interpreter::evaluate_dot_expr(DotExpr *s, Scope *scope) {
+    // get head value
+    LiteralValue *head = evaluate_expr(s->head.get(), scope);
+    // Object Value to access attributes
+    ObjectValue *obj = static_cast<ObjectValue *>(head);
+    // Literal Value pointer to track what to return
+    LiteralValue *to_return = head;
+
+    for (auto &after : s->after) {
+        if (after->type == ASTNodeType::SYMBOL) {
+            // WARN: function calls not implemented here
+            SymbolExpr *symbol = static_cast<SymbolExpr *>(after.get());
+            if (obj->values[symbol->symbol]) {
+                to_return = obj->values[symbol->symbol];
+                if (to_return->type == ValueType::OBJECT) {
+                    obj = static_cast<ObjectValue *>(to_return);
+                }
+            } else {
+                throw std::runtime_error(
+                    "Failed to find symbol after dot expression.");
+            }
+        } else {
+            UNIMPLEMENTED();
+        }
+    }
+
+    return to_return;
 }
 
 LiteralValue *Interpreter::get_variable(const std::string &s, Scope *scope) {

@@ -20,6 +20,7 @@ enum class ASTNodeType {
     RETURN_STATEMENT,
     CLASS_DEFINITION,
     OBJECT_INSTANTIATION,
+    OBJECT_ATTR_REASSIGN,
     // expressions
     LITERAL,
     LIST,
@@ -158,12 +159,24 @@ struct ObjectInstantiationExpr : public Expr {
     std::string class_name;
 };
 
-struct DotExpr : public SymbolExpr {
-    DotExpr(const std::string &before) : SymbolExpr(before) {
+struct DotExpr : public Expr {
+    DotExpr() : Expr() {
         type = ASTNodeType::DOT_SYMBOL;
     }
-    uptr<SymbolExpr> after;
-    // uptr<Expr> value;
+    std::string full_expr() const;
+
+    uptr<Expr> head;
+    std::vector<uptr<Expr>> after;
+};
+
+struct ObjectAttrReassignExpr : public Expr {
+    ObjectAttrReassignExpr() : Expr() {
+        type = ASTNodeType::OBJECT_ATTR_REASSIGN;
+    }
+    std::string full_expr() const;
+
+    uptr<Expr> head;
+    uptr<Expr> right;
 };
 
 #endif // AST_HPP

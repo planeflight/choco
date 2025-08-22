@@ -264,8 +264,48 @@ uptr<Expr> Parser::unary() {
         unary_expr->unary = unary(); // recursive unary
         return unary_expr;
     }
-    // must be call or primary
-    return primary();
+    // must be postfix, call or primary
+    return postfix();
+}
+
+uptr<Expr> Parser::postfix() {
+    // get symbol
+    auto left = primary();
+
+    // force dot operator
+    if (!match(TokenType::DOT)) return left;
+
+    advance();
+    auto dot_expr = std::make_unique<DotExpr>();
+    dot_expr->head = std::move(left);
+
+    const auto advance_wrapper = [&]() -> bool {
+        advance();
+        return true;
+    };
+
+    do {
+        // must be symbol
+        auto left = primary();
+        if (left->type == ASTNodeType::LITERAL)
+            throw std::runtime_error(
+                "Literal Types cannot have postfix '.' operator");
+
+        dot_expr->after.push_back(std::move(left));
+
+    } while (match(TokenType::DOT) && advance_wrapper());
+
+    // now check if it's an assignment
+    if (match(TokenType::ASSIGNMENT)) {
+        advance();
+        auto assignment_expr = std::make_unique<ObjectAttrReassignExpr>();
+        assignment_expr->head = std::move(dot_expr);
+        assignment_expr->right = expression();
+        expect(TokenType::SEMICOLON);
+        return assignment_expr;
+    }
+
+    return dot_expr;
 }
 
 uptr<Expr> Parser::primary() {
@@ -301,15 +341,6 @@ uptr<Expr> Parser::primary() {
         if (match(TokenType::OPEN_PAREN)) {
             advance();
             return finish_call(std::move(symbol));
-        }
-        // dot operator
-        if (match(TokenType::DOT)) {
-            advance();
-            auto after_dot_symbol = expect(TokenType::SYMBOL);
-            auto dot_expr = std::make_unique<DotExpr>(symbol->symbol);
-            dot_expr->after =
-                std::make_unique<SymbolExpr>(after_dot_symbol->content());
-            return dot_expr;
         }
         return symbol;
     }

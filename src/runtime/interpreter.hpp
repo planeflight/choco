@@ -28,7 +28,8 @@ class Interpreter {
                                             Scope *scope);
     LiteralValue *evaluate_object_instantiation(ObjectInstantiationExpr *s,
                                                 Scope *scope);
-    LiteralValue *evaluate_dot_expr(DotExpr *e, Scope *scope);
+    LiteralValue *evaluate_object_attr_reassign(ObjectAttrReassignExpr *s,
+                                                Scope *scope);
 
     LiteralValue *evaluate_if_statement(IfExpr *s, Scope *scope);
     LiteralValue *evaluate_while_statement(WhileExpr *s, Scope *scope);
@@ -40,6 +41,7 @@ class Interpreter {
     LiteralValue *evaluate_binary_expr(BinaryExpr *v, Scope *scope);
     LiteralValue *evaluate_unary_expr(UnaryExpr *v, Scope *scope);
 
+    LiteralValue *evaluate_dot_expr(DotExpr *s, Scope *scope);
     LiteralValue *get_variable(const std::string &s, Scope *scope);
 
     // INFO: predefined STDIO functions

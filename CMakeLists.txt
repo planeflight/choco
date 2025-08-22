@@ -32,7 +32,7 @@ add_executable(${PROJECT_NAME}
     src/token.cpp
     src/parser.cpp
     src/lexer.cpp
-    src/runtime/class.cpp
+    src/ast.cpp
     src/runtime/interpreter.cpp
     src/runtime/memory.cpp
     src/runtime/runtime.cpp

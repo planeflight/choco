@@ -39,6 +39,7 @@ class Parser {
     uptr<Expr> term();
     uptr<Expr> factor();
     uptr<Expr> unary();
+    uptr<Expr> postfix();
     uptr<Expr> primary();
 
     uptr<VariableDeclaration> var_declaration();

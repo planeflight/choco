@@ -1,5 +1,7 @@
 #include "interpreter.hpp"
 
+#include <fmt/core.h>
+
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -153,6 +155,46 @@ LiteralValue *Interpreter::evaluate_class_definition(ClassDefinitionExpr *s,
     return nullptr;
 }
 
+LiteralValue *Interpreter::evaluate_object_instantiation(
+    ObjectInstantiationExpr *s,
+    Scope *scope) {
+    // check if class name already exists, if not error
+    if (!global_scope.runtime.class_exists(s->class_name)) {
+        throw std::runtime_error("Error: Class name '" + s->class_name +
+                                 "' does not exist!");
+    }
+
+    ClassDefinitionExpr *class_definition =
+        global_scope.runtime.get_class_value(s->class_name);
+    auto new_obj_value = memory.get<ObjectValue>();
+    // set default values, then call constructor
+    for (auto &attr : class_definition->attributes) {
+        new_obj_value->values[attr->name] =
+            evaluate_expr(attr->value.get(), scope);
+    }
+    return new_obj_value;
+}
+
+LiteralValue *Interpreter::evaluate_dot_expr(DotExpr *e, Scope *scope) {
+    const std::string &beginning = e->symbol;
+
+    while (scope != nullptr) {
+        if (scope->runtime.var_exists(beginning)) {
+            ObjectValue *v = static_cast<ObjectValue *>(
+                scope->runtime.get_variable_value(beginning));
+            // TODO: recurse for all dots
+            if (v->values[e->after->symbol]) {
+                LiteralValue *value = v->values[e->after->symbol];
+                return value;
+            }
+        }
+        // move up the tree
+        scope = scope->parent;
+    }
+    throw std::runtime_error("Invalid dot expression!");
+    return nullptr;
+}
+
 LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s, Scope *scope) {
     bool run_else = true;
     auto eval =
@@ -233,15 +275,13 @@ LiteralValue *Interpreter::evaluate_expr(Expr *expr, Scope *scope) {
     if (expr->type == ASTNodeType::SYMBOL) {
         // check scopes
         const std::string &name = (static_cast<SymbolExpr *>(expr))->symbol;
-        while (scope != nullptr) {
-            if (scope->runtime.var_exists(name)) {
-                return scope->runtime.get_variable_value(name);
-            }
-            // move up the tree
-            scope = scope->parent;
-        }
-        throw std::runtime_error("Error: Variable '" + name +
-                                 "' is not in scope and does not exist!");
+        return get_variable(name, scope);
+    }
+    // TODO: make variable looking for scope modular func
+    if (expr->type == ASTNodeType::DOT_SYMBOL) {
+        // check scopes
+        auto dot = static_cast<DotExpr *>(expr);
+        return evaluate_dot_expr(dot, scope);
     }
     if (expr->type == ASTNodeType::BINARY) {
         return evaluate_binary_expr(static_cast<BinaryExpr *>(expr), scope);
@@ -251,6 +291,10 @@ LiteralValue *Interpreter::evaluate_expr(Expr *expr, Scope *scope) {
     }
     if (expr->type == ASTNodeType::FUNCTION_CALL) {
         return evaluate_function_call(static_cast<CallExpr *>(expr), scope);
+    }
+    if (expr->type == ASTNodeType::OBJECT_INSTANTIATION) {
+        return evaluate_object_instantiation(
+            static_cast<ObjectInstantiationExpr *>(expr), scope);
     }
     return nullptr;
 }
@@ -396,14 +440,25 @@ LiteralValue *Interpreter::evaluate_unary_expr(UnaryExpr *v, Scope *scope) {
     return nullptr;
 }
 
+LiteralValue *Interpreter::get_variable(const std::string &s, Scope *scope) {
+    while (scope != nullptr) {
+        if (scope->runtime.var_exists(s)) {
+            return scope->runtime.get_variable_value(s);
+        } // move up the tree
+        scope = scope->parent;
+    }
+    throw std::runtime_error("Error: Variable '" + s +
+                             "' is not in scope and does not exist!");
+}
+
 LiteralValue *Interpreter::print(CallExpr *s, Scope *scope) {
     if (s->params.size() == 0) {
-        std::cout << "\n";
+        fmt::println("");
     } else {
         auto *child = s->params.front().get();
         LiteralValue *v = evaluate_expr(child, scope);
         if (v) {
-            std::cout << literal_to_string(*v) << std::endl;
+            fmt::println("{}", literal_to_string(*v));
         } else
             throw std::runtime_error("Error: Invalid value!");
     }

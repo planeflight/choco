@@ -1,5 +1,7 @@
 #include "token.hpp"
 
+#include <fmt/core.h>
+
 #include <sstream>
 #include <string>
 

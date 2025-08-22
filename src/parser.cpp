@@ -13,11 +13,13 @@ Parser::Parser(const std::vector<Token> &tokens) : tokens(tokens) {}
 
 Parser::~Parser() {}
 
-Token *Parser::expect(TokenType type) {
+StatusOr<Token *> Parser::expect(TokenType type) {
     if (!match(type))
-        throw std::runtime_error("Error: expected " + type_to_string(type) +
-                                 " but got " + type_to_string(current()->type) +
-                                 "\n");
+        return StatusOr<Token *>(
+            Status::SYNTAX_ERROR,
+            fmt::format(
+                "Expected {} but got {} instead.", type, current()->type));
+
     Token *curr = current();
     advance();
     return curr;
@@ -61,8 +63,6 @@ std::vector<uptr<Statement>> Parser::parse_body() {
     while (!match(TokenType::CLOSE_CURLY)) {
         statements.push_back(declaration());
     }
-    if (statements.size() == 0)
-        throw std::runtime_error("Missing closing '}' brace");
     advance();
     return statements;
 }
@@ -302,11 +302,19 @@ uptr<Expr> Parser::primary() {
             advance();
             return finish_call(std::move(symbol));
         }
+        // dot operator
+        if (match(TokenType::DOT)) {
+            advance();
+            auto after_dot_symbol = expect(TokenType::SYMBOL);
+            auto dot_expr = std::make_unique<DotExpr>(symbol->symbol);
+            dot_expr->after =
+                std::make_unique<SymbolExpr>(after_dot_symbol->content());
+            return dot_expr;
+        }
         return symbol;
     }
     // array
     if (match(TokenType::OPEN_BRACKET)) {
-        std::cout << "yeah\n";
         advance();
         auto expr = std::make_unique<ListExpr>();
         auto advance_wrapper = [&]() -> bool {
@@ -318,12 +326,21 @@ uptr<Expr> Parser::primary() {
         if (!match(TokenType::CLOSE_BRACKET)) {
             do {
                 auto list_elem = expression();
-                std::cout << (int)list_elem->type << std::endl;
                 expr->elements.push_back(std::move(list_elem));
             } while (match(TokenType::COMMA) && advance_wrapper());
         }
         expect(TokenType::CLOSE_BRACKET);
         return expr;
+    }
+    // new object
+    if (match(TokenType::NEW)) {
+        advance();
+        expect(TokenType::SYMBOL);
+        auto object_expr = std::make_unique<ObjectInstantiationExpr>();
+        object_expr->class_name = previous()->content();
+        expect(TokenType::OPEN_PAREN);
+        expect(TokenType::CLOSE_PAREN);
+        return object_expr;
     }
     // parentheses
     if (match(TokenType::OPEN_PAREN)) {
@@ -332,12 +349,15 @@ uptr<Expr> Parser::primary() {
         expect(TokenType::CLOSE_PAREN);
         return expr;
     }
-    std::cout << curr_content << std::endl;
+    fmt::println("{}", curr_content);
     UNIMPLEMENTED();
 }
 
 uptr<VariableDeclaration> Parser::var_declaration() {
-    Token *symbol = expect(TokenType::SYMBOL);
+    StatusOr<Token *> symbol = expect(TokenType::SYMBOL);
+    if (!symbol.ok()) { // TODO
+    }
+
     uptr<VariableDeclaration> declaration =
         std::make_unique<VariableDeclaration>();
     declaration->name = symbol->content();
@@ -402,17 +422,11 @@ uptr<Expr> Parser::class_def() {
     expect(TokenType::OPEN_CURLY);
 
     while (!match(TokenType::CLOSE_CURLY)) {
-        // either member variables
+        // define all the struct vars
         if (match(TokenType::LET)) {
             advance();
             auto var_decl = var_declaration();
             class_expr->attributes.push_back(std::move(var_decl));
-        }
-        // or defining a method
-        if (match(TokenType::FUNCTION)) {
-            advance();
-            auto function = function_def();
-            class_expr->functions.push_back(std::move(function));
         }
     }
     advance();

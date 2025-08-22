@@ -19,12 +19,14 @@ enum class ASTNodeType {
     FUNCTION_DEFINITION,
     RETURN_STATEMENT,
     CLASS_DEFINITION,
+    OBJECT_INSTANTIATION,
     // expressions
     LITERAL,
     LIST,
     BINARY,
     UNARY,
-    SYMBOL
+    SYMBOL,
+    DOT_SYMBOL
 };
 
 struct ASTNode {
@@ -146,8 +148,22 @@ struct ClassDefinitionExpr : public Expr {
         type = ASTNodeType::CLASS_DEFINITION;
     }
     std::string name;
-    std::vector<uptr<FunctionDefExpr>> functions;
     std::vector<uptr<VariableDeclaration>> attributes;
+};
+
+struct ObjectInstantiationExpr : public Expr {
+    ObjectInstantiationExpr() : Expr() {
+        type = ASTNodeType::OBJECT_INSTANTIATION;
+    }
+    std::string class_name;
+};
+
+struct DotExpr : public SymbolExpr {
+    DotExpr(const std::string &before) : SymbolExpr(before) {
+        type = ASTNodeType::DOT_SYMBOL;
+    }
+    uptr<SymbolExpr> after;
+    // uptr<Expr> value;
 };
 
 #endif // AST_HPP

@@ -141,6 +141,7 @@ Token Lexer::next() {
                                   TokenType::FUNCTION,
                                   TokenType::RETURN,
                                   TokenType::CLASS,
+                                  TokenType::NEW,
                                   TokenType::BOOLEAN,
                                   TokenType::BOOLEAN};
 
@@ -155,6 +156,7 @@ Token Lexer::next() {
             "confection", // TODO: config file to change keywords
             "gift",
             "box",
+            "new",
             "true",
             "false"};
 

@@ -1,18 +1,25 @@
+#include <fmt/core.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
 
+#include "fmt/base.h"
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "runtime/interpreter.hpp"
 #include "token.hpp"
 #include "util/file.hpp"
+#include "util/status.hpp"
 
 int main() {
-    std::string source = load_file("./tests/main.choco");
-    // std::string source = "if (1 >= 1) { print(\"in if\"); }";
+    StatusOr<std::string> source = load_file("./tests/main.choco");
+    if (!source.ok()) {
+        source.output_error();
+        return source.error();
+    }
     // tokenize
-    Lexer lexer{source};
+    Lexer lexer{*source};
     lexer.retokenize();
     // create the list of tokens
     std::vector<Token> tokens;
@@ -22,19 +29,15 @@ int main() {
         token = lexer.next();
     }
     tokens.push_back(token); // add the end token
-    for (const auto &token : tokens) {
-        std::cout << type_to_string(token.type) << std::endl;
-    }
 
-    std::cout << "PARSING\n\n";
+    fmt::println("PARSING");
     // generate the AST
     Parser parser{tokens};
 
     const std::vector<uptr<Statement>> &ast = parser.parse();
 
     Interpreter choco;
-    std::cout << "Evaluating\n\n";
-    std::cout << "choco >\n";
+    fmt::println("EVALUATING\n>");
     choco.eval(ast);
 
     return 0;

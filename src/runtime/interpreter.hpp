@@ -9,10 +9,15 @@
 #include "token.hpp"
 #include "util/util.hpp"
 
-struct Interpreter {
+class Interpreter {
+  public:
     Interpreter();
     void eval(const std::vector<uptr<Statement>> &ast);
+
+  private:
     LiteralValue *evaluate(Statement *statement, Scope *scope);
+
+    // statements
     LiteralValue *evaluate_variable_declaration(VariableDeclaration *v,
                                                 Scope *scope);
 
@@ -21,21 +26,26 @@ struct Interpreter {
                                                Scope *scope);
     LiteralValue *evaluate_class_definition(ClassDefinitionExpr *s,
                                             Scope *scope);
+    LiteralValue *evaluate_object_instantiation(ObjectInstantiationExpr *s,
+                                                Scope *scope);
+    LiteralValue *evaluate_dot_expr(DotExpr *e, Scope *scope);
 
     LiteralValue *evaluate_if_statement(IfExpr *s, Scope *scope);
     LiteralValue *evaluate_while_statement(WhileExpr *s, Scope *scope);
     LiteralValue *evaluate_return_statement(ReturnExpr *s, Scope *scope);
     LiteralValue *evaluate_list(ListExpr *s, Scope *scope);
 
+    // expressions
     LiteralValue *evaluate_expr(Expr *expr, Scope *scope);
     LiteralValue *evaluate_binary_expr(BinaryExpr *v, Scope *scope);
     LiteralValue *evaluate_unary_expr(UnaryExpr *v, Scope *scope);
+
+    LiteralValue *get_variable(const std::string &s, Scope *scope);
 
     // INFO: predefined STDIO functions
     LiteralValue *print(CallExpr *s, Scope *scope);
     LiteralValue *input(CallExpr *s, Scope *scope);
 
-  private:
     Scope global_scope;
     Memory memory;
 };

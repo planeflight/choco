@@ -3,11 +3,12 @@
 
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "util/util.hpp"
 
-enum class ValueType { NONE = 0, BOOL, NUMBER, STRING, CLASS, LIST };
+enum class ValueType { NONE = 0, BOOL, NUMBER, STRING, CLASS, LIST, OBJECT };
 
 struct LiteralValue {
     LiteralValue() = default;
@@ -45,9 +46,11 @@ struct StringValue : public LiteralValue {
     std::string value;
 };
 
-template <typename T>
 struct ObjectValue : public LiteralValue {
-    uptr<T> value;
+    ObjectValue() {
+        type = ValueType::OBJECT;
+    }
+    std::unordered_map<std::string, LiteralValue *> values;
 };
 
 struct ListValue : public LiteralValue {

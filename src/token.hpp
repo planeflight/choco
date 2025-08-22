@@ -1,6 +1,8 @@
 #ifndef TOKEN_HPP
 #define TOKEN_HPP
 
+#include <fmt/core.h>
+
 #include <string>
 
 enum class TokenType {
@@ -28,6 +30,7 @@ enum class TokenType {
     VARIABLE,
     RETURN,
     CLASS,
+    NEW,
 
     NUMBER,
     BOOLEAN,
@@ -54,6 +57,15 @@ enum class TokenType {
 };
 
 std::string type_to_string(TokenType type);
+
+template <>
+struct fmt::formatter<TokenType> : fmt::formatter<std::string> {
+    auto format(TokenType t, fmt::format_context &ctx) const {
+        // use fmt inside to build a string
+        return fmt::formatter<std::string>::format(
+            fmt::format("{}", type_to_string(t)), ctx);
+    }
+};
 
 struct Token {
     TokenType type;

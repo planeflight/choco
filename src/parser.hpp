@@ -7,6 +7,7 @@
 
 #include "ast.hpp"
 #include "token.hpp"
+#include "util/status.hpp"
 
 class Parser {
   public:
@@ -15,7 +16,8 @@ class Parser {
 
     const std::vector<uptr<Statement>> &parse();
 
-    Token *expect(TokenType type);
+  private:
+    StatusOr<Token *> expect(TokenType type);
     bool match(TokenType type);
     bool match_peek(TokenType type);
 
@@ -39,7 +41,6 @@ class Parser {
     uptr<Expr> unary();
     uptr<Expr> primary();
 
-  private:
     uptr<VariableDeclaration> var_declaration();
     uptr<Expr> finish_call(uptr<SymbolExpr> expr);
     uptr<FunctionDefExpr> function_def();

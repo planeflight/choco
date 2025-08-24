@@ -37,7 +37,8 @@ bool Parser::match_peek(TokenType type) {
 const std::vector<uptr<Statement>> &Parser::parse() {
     while (current()->type != TokenType::END) {
         uptr<Statement> s = declaration();
-        statements.push_back(std::move(s));
+        // if it's nullptr it's a comment
+        if (s) statements.push_back(std::move(s));
     }
     return statements;
 }
@@ -62,13 +63,20 @@ std::vector<uptr<Statement>> Parser::parse_body() {
     std::vector<uptr<Statement>> statements;
     expect(TokenType::OPEN_CURLY);
     while (!match(TokenType::CLOSE_CURLY)) {
-        statements.push_back(declaration());
+        uptr<Statement> s = declaration();
+        // if it's nullptr it's a comment
+        if (s) statements.push_back(std::move(s));
     }
     advance();
     return statements;
 }
 
 uptr<Expr> Parser::declaration() {
+    // remove comments
+    while (match(TokenType::COMMENT) && current()->type != TokenType::END) {
+        advance();
+        return nullptr;
+    }
     // variable assignment
     if (match(TokenType::LET)) {
         advance();

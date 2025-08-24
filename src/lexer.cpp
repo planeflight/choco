@@ -56,7 +56,6 @@ char Lexer::chop_char() {
     if (x == '\n') {
         line++;
         line_start = idx;
-    } else {
     }
     return x;
 }
@@ -197,8 +196,8 @@ Token Lexer::next() {
         return token;
     }
 
-    // find comments
-    if (starts_with("//", 2)) {
+    // comments
+    if (starts_with("#", 1)) {
         token.type = TokenType::COMMENT;
         while (idx < len && text[idx] != '\n') {
             chop_char();

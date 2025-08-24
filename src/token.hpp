@@ -53,7 +53,8 @@ enum class TokenType {
     AND,
     OR,
     COMMA,
-    DOT
+    DOT,
+    POUND,
 };
 
 std::string type_to_string(TokenType type);

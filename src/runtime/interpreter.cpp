@@ -1,19 +1,43 @@
 #include "interpreter.hpp"
 
 #include <fmt/core.h>
+#include <raylib.h>
 
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <memory>
-#include <stdexcept>
 #include <string>
 
 #include "ast.hpp"
+#include "runtime/graphics.hpp"
 #include "runtime/runtime.hpp"
 #include "runtime/scope.hpp"
 #include "token.hpp"
 #include "util/error.hpp"
 #include "util/util.hpp"
 #include "value.hpp"
+
+LiteralValue *copy(Memory &memory, LiteralValue *s) {
+    switch (s->type) {
+        case ValueType::NUMBER: {
+            return memory.get<NumValue>(as_double(s));
+        }
+        case ValueType::BOOL: {
+            return memory.get<BoolValue>(as_bool(s));
+        }
+        case ValueType::STRING: {
+            return memory.get<StringValue>(as_string(s));
+        }
+        // list and objects are references
+        case ValueType::LIST: {
+            return s;
+        }
+        case ValueType::OBJECT: {
+            return s;
+        }
+    }
+}
 
 Interpreter::Interpreter() {}
 
@@ -116,6 +140,149 @@ LiteralValue *Interpreter::evaluate_function_call(CallExpr *s, Scope *scope) {
     if (s->callee->symbol == "input") {
         return input(s, scope);
     }
+    std::vector<LiteralValue *> args;
+    std::for_each(s->params.begin(),
+                  s->params.end(),
+                  [&args, this, &scope](uptr<Expr> &expr) {
+                      args.push_back(evaluate_expr(expr.get(), scope));
+                  });
+
+    args.reserve(s->params.size());
+    // math funcs
+    if (s->callee->symbol == "abs") {
+        expect_args(args, 1);
+        return memory.get<NumValue>(std::abs(as_double(args[0])));
+    }
+    if (s->callee->symbol == "sign") {
+        expect_args(args, 1);
+        double v = as_double(args[0]);
+        return memory.get<NumValue>(v / std::abs(v));
+    }
+    if (s->callee->symbol == "pow") {
+        expect_args(args, 2);
+        return memory.get<NumValue>(
+            std::pow(as_double(args[0]), as_double(args[1])));
+    }
+    if (s->callee->symbol == "sin") {
+        expect_args(args, 1);
+        return memory.get<NumValue>(std::sin(as_double(args[0])));
+    }
+    if (s->callee->symbol == "cos") {
+        expect_args(args, 1);
+        return memory.get<NumValue>(std::cos(as_double(args[0])));
+    }
+    if (s->callee->symbol == "tan") {
+        expect_args(args, 1);
+        return memory.get<NumValue>(std::tan(as_double(args[0])));
+    }
+    if (s->callee->symbol == "sqrt") {
+        expect_args(args, 1);
+        return memory.get<NumValue>(std::sqrt(as_double(args[0])));
+    }
+    if (s->callee->symbol == "round") {
+        expect_args(args, 1);
+        return memory.get<NumValue>(std::round(as_double(args[0])));
+    }
+    if (s->callee->symbol == "ceil") {
+        expect_args(args, 1);
+        return memory.get<NumValue>(std::ceil(as_double(args[0])));
+    }
+    if (s->callee->symbol == "floor") {
+        expect_args(args, 1);
+        return memory.get<NumValue>(std::floor(as_double(args[0])));
+    }
+    // array/string methods
+    if (s->callee->symbol == "len") {
+        expect_args(args, 1);
+        auto v = args[0];
+        if (v->type == ValueType::LIST)
+            return memory.get<NumValue>(
+                static_cast<ListValue *>(v)->value.size());
+        if (v->type == ValueType::STRING)
+            return memory.get<NumValue>(
+                static_cast<StringValue *>(v)->value.size());
+        throw Error(Error::INVALID_ARGUMENT_ERROR,
+                    "Expected list or string type.");
+    }
+    if (s->callee->symbol == "get") {
+        expect_args(args, 2);
+        auto container = args[0];
+        int idx = (int)as_double(args[1]);
+        if (container->type == ValueType::LIST)
+            return static_cast<ListValue *>(container)->value[idx];
+        if (container->type == ValueType::STRING) {
+            std::string str =
+                std::string{static_cast<StringValue *>(container)->value[idx]};
+            return memory.get<StringValue>(str);
+        }
+        throw Error(Error::INVALID_ARGUMENT_ERROR,
+                    "Expected list or string type.");
+    }
+    if (s->callee->symbol == "append") {
+        expect_args(args, 2);
+        auto container = args[0];
+        auto v = args[1];
+        if (container->type == ValueType::LIST) {
+            static_cast<ListValue *>(container)->value.push_back(v);
+            return nullptr;
+        }
+        if (container->type == ValueType::STRING) {
+            const std::string &str_to_add = as_string(v);
+            static_cast<StringValue *>(container)->value.append(str_to_add);
+            return nullptr;
+        }
+        throw Error(Error::INVALID_ARGUMENT_ERROR,
+                    "Expected list or string type.");
+    }
+    if (s->callee->symbol == "pop") {
+        expect_args(args, 1);
+        auto container = args[0];
+        if (container->type == ValueType::LIST) {
+            static_cast<ListValue *>(container)->value.pop_back();
+            return nullptr;
+        }
+        if (container->type == ValueType::STRING) {
+            static_cast<StringValue *>(container)->value.pop_back();
+        }
+        throw Error(Error::INVALID_ARGUMENT_ERROR,
+                    "Expected list or string type.");
+    }
+    if (s->callee->symbol == "insert") {
+        expect_args(args, 3);
+        auto container = args[0];
+        auto elem = args[1];
+        int idx = (int)as_double(args[1]);
+        if (container->type == ValueType::LIST) {
+            auto &vec = static_cast<ListValue *>(container)->value;
+            vec.insert(vec.begin() + idx, elem);
+            return nullptr;
+        }
+        if (container->type == ValueType::STRING) {
+            const std::string &str_to_add = as_string(elem);
+            auto &str = static_cast<StringValue *>(container)->value;
+            str.insert(idx, str_to_add);
+            return nullptr;
+        }
+        throw Error(Error::INVALID_ARGUMENT_ERROR,
+                    "Expected list or string type.");
+    }
+
+    // GRAPHICS RAYLIB FUNCTIONS
+    if (s->callee->symbol == "init_window") return init_window(memory, args);
+    if (s->callee->symbol == "close_window") return close_window(memory, args);
+    if (s->callee->symbol == "window_should_close")
+        return window_should_close(memory, args);
+    if (s->callee->symbol == "begin_drawing")
+        return begin_drawing(memory, args);
+    if (s->callee->symbol == "end_drawing") return end_drawing(memory, args);
+    if (s->callee->symbol == "clear_background")
+        return clear_background(memory, args);
+    if (s->callee->symbol == "draw_rectangle")
+        return draw_rectangle(memory, args);
+    if (s->callee->symbol == "draw_text") return draw_text(memory, args);
+    if (s->callee->symbol == "draw_circle") return draw_circle(memory, args);
+    if (s->callee->symbol == "is_key_down") return is_key_down(memory, args);
+
     // check in user-defined functions
     if (global_scope.runtime.func_exists(s->callee->symbol)) {
         FunctionDefExpr *function =
@@ -186,8 +353,8 @@ LiteralValue *Interpreter::evaluate_object_instantiation(
     auto new_obj_value = memory.get<ObjectValue>();
     // set default values, then call constructor
     for (auto &attr : class_definition->attributes) {
-        new_obj_value->values[attr->name] =
-            evaluate_expr(attr->value.get(), scope);
+        LiteralValue *s = evaluate_expr(attr->value.get(), scope);
+        new_obj_value->values[attr->name] = copy(memory, s);
     }
     return new_obj_value;
 }
@@ -208,9 +375,9 @@ LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s, Scope *scope) {
     if (eval->value) {
         run_else = false;
 
+        Scope new_scope;
+        new_scope.parent = scope;
         for (const auto &s : s->statements) {
-            Scope new_scope;
-            new_scope.parent = scope;
             evaluate(s.get(), &new_scope);
         }
     } else {
@@ -364,16 +531,18 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
             Error::TYPE_ERROR,
             fmt::format("Error: Invalid string operation '{}'.", v->op));
     }
-    // TODO: different string concatenation with string + num or string + bool,
-    // etc
     // string concatenation
     if (left->type == ValueType::STRING && right->type == ValueType::NUMBER) {
         auto lval = static_cast<StringValue *>(left);
         auto rval = static_cast<NumValue *>(right);
         StringValue *res = nullptr;
         if (v->op == TokenType::PLUS) {
-            res = memory.get<StringValue>(lval->value +
-                                          std::to_string(rval->value));
+            // remove unnecessary digits in string by rounding
+            std::string num = std::to_string(rval->value);
+            if (std::round(rval->value) == rval->value) {
+                num = std::to_string((int)rval->value);
+            }
+            res = memory.get<StringValue>(lval->value + num);
             return res;
         }
         throw Error(
@@ -385,8 +554,12 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
         auto rval = static_cast<StringValue *>(right);
         StringValue *res = nullptr;
         if (v->op == TokenType::PLUS) {
-            res = memory.get<StringValue>(std::to_string(lval->value) +
-                                          rval->value);
+            // remove unnecessary digits in string by rounding
+            std::string num = std::to_string(lval->value);
+            if (std::round(lval->value) == lval->value) {
+                num = std::to_string((int)lval->value);
+            }
+            res = memory.get<StringValue>(num + rval->value);
             return res;
         }
         throw Error(
@@ -423,14 +596,13 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
 
     // comparison/boolean operators
     if (left->type == ValueType::BOOL && right->type == ValueType::BOOL) {
-        auto lval = static_cast<BoolValue *>(left);
-        auto rval = static_cast<BoolValue *>(right);
+        auto lval = static_cast<BoolValue *>(left)->value;
+        auto rval = static_cast<BoolValue *>(right)->value;
         BoolValue *res = memory.get<BoolValue>(false);
         if (v->op == TokenType::AND) {
             res->value = lval && rval;
         } else if (v->op == TokenType::OR) {
             res->value = lval || rval;
-
         } else if (v->op == TokenType::EQUALS) {
             res->value = lval == rval;
         } else if (v->op == TokenType::NOT_EQUAL) {
@@ -494,7 +666,9 @@ LiteralValue *Interpreter::evaluate_dot_expr(DotExpr *s, Scope *scope) {
 LiteralValue *Interpreter::get_variable(const std::string &s, Scope *scope) {
     while (scope != nullptr) {
         if (scope->runtime.var_exists(s)) {
-            return scope->runtime.get_variable_value(s);
+            // returning a reference essentially
+            LiteralValue *v = scope->runtime.get_variable_value(s);
+            return v;
         } // move up the tree
         scope = scope->parent;
     }
@@ -510,7 +684,7 @@ LiteralValue *Interpreter::print(CallExpr *s, Scope *scope) {
         auto *child = s->params.front().get();
         LiteralValue *v = evaluate_expr(child, scope);
         if (v) {
-            fmt::println("{}", literal_to_string(*v));
+            fmt::println("{}", *v);
         } else
             throw Error(Error::ARGUMENT_ERROR, "Error: Invalid value!");
     }

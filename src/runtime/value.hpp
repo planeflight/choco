@@ -15,8 +15,9 @@ enum class ValueType { NONE = 0, BOOL, NUMBER, STRING, CLASS, LIST, OBJECT };
 struct LiteralValue {
     LiteralValue() = default;
     virtual ~LiteralValue() = default;
-    ValueType type;
     virtual void operator=(LiteralValue &other) = 0;
+
+    ValueType type;
 };
 
 struct NoneValue : public LiteralValue {
@@ -77,6 +78,7 @@ struct ObjectValue : public LiteralValue {
         if (other.type != ValueType::OBJECT) {
             throw Error(Error::TYPE_ERROR, "Cannot assign different types");
         }
+        fmt::println("objbect = called");
         // reset values and copy everything according to copy or reference rules
         values.clear();
         auto obj = static_cast<ObjectValue &>(other);
@@ -134,14 +136,56 @@ inline std::string literal_to_string(LiteralValue &value) {
             ss << literal_to_string(*v.value.back()) << "]";
             return ss.str();
         }
+        case ValueType::OBJECT: {
+            auto &v = static_cast<ObjectValue &>(value);
+            std::stringstream ss;
+            ss << "[";
+            for (const auto &[key, val] : v.values) {
+                ss << key << ": " << literal_to_string(*val) << ", ";
+            }
+            ss << "]";
+            return ss.str();
+        }
     }
-    UNIMPLEMENTED();
+    throw Error(Error::INVALID_ARGUMENT_ERROR, "Invalid literal type");
     return "";
 }
 
-//
-// struct ListValue : public RuntimeValue {
-//     std::vector<RuntimeValue &> value;
-// };
+inline double as_double(LiteralValue *v) {
+    if (v->type != ValueType::NUMBER)
+        throw Error(Error::INVALID_ARGUMENT_ERROR,
+                    "Invalid argument: expected number.");
+    return static_cast<NumValue *>(v)->value;
+}
+
+inline bool as_bool(LiteralValue *v) {
+    if (v->type != ValueType::BOOL)
+        throw Error(Error::INVALID_ARGUMENT_ERROR,
+                    "Invalid argument: expected bool.");
+    return static_cast<BoolValue *>(v)->value;
+}
+
+inline std::string as_string(LiteralValue *v) {
+    if (v->type != ValueType::STRING)
+        throw Error(Error::INVALID_ARGUMENT_ERROR,
+                    "Invalid argument: expected string.");
+    return static_cast<StringValue *>(v)->value;
+}
+
+inline const std::vector<LiteralValue *> &as_list(LiteralValue *v) {
+    if (v->type != ValueType::LIST)
+        throw Error(Error::INVALID_ARGUMENT_ERROR,
+                    "Invalid argument: expected list.");
+    return static_cast<ListValue *>(v)->value;
+}
+
+template <>
+struct fmt::formatter<LiteralValue> : fmt::formatter<std::string> {
+    auto format(LiteralValue &v, fmt::format_context &ctx) const {
+        // use fmt inside to build a string
+        return fmt::formatter<std::string>::format(
+            fmt::format("{}", literal_to_string(v)), ctx);
+    }
+};
 
 #endif // VALUE_HPP

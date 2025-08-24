@@ -1,10 +1,10 @@
 #include <fmt/core.h>
+#include <raylib.h>
 
 #include <iostream>
 #include <string>
 #include <vector>
 
-#include "fmt/base.h"
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "runtime/interpreter.hpp"
@@ -12,9 +12,16 @@
 #include "util/error.hpp"
 #include "util/file.hpp"
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        fmt::println("choco <file-name>");
+        return 0;
+    }
+
+    // if there's an error anywhere we fall back because the interpreter cannot
+    // continue at this point
     try {
-        std::string source = load_file("./tests/main.choco");
+        std::string source = load_file(argv[1]);
         // tokenize
         Lexer lexer{source};
         lexer.retokenize();
@@ -27,19 +34,16 @@ int main() {
         }
         tokens.push_back(token); // add the end token
 
-        fmt::println("PARSING");
         // generate the AST
         Parser parser{tokens};
-
         const std::vector<uptr<Statement>> &ast = parser.parse();
 
+        // run the interpreter
         Interpreter choco;
-        fmt::println("EVALUATING\n>");
         choco.eval(ast);
 
-    } catch (Error error) {
+    } catch (const Error &error) {
         return error.output_error();
     }
-
     return 0;
 }

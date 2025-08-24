@@ -7,6 +7,7 @@
 #include "runtime/scope.hpp"
 #include "runtime/value.hpp"
 #include "token.hpp"
+#include "util/error.hpp"
 #include "util/util.hpp"
 
 class Interpreter {

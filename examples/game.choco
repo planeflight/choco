@@ -1,0 +1,134 @@
+# pong demo in Choco!
+let WIDTH = 800;
+let HEIGHT = 450;
+
+let SPEED = 5;
+let BALL_SPEED = 7;
+
+box Rect {
+    let x = 0;
+    let y = 0;
+    let w = 0;
+    let h = 0;
+}
+
+confection overlaps(a, b) {
+    gift (b.x < a.x + a.w && b.x + b.w > a.x && b.y < a.y + a.h && b.y + b.h > a.y);
+}
+
+box Vec2 {
+    let x = 0;
+    let y = 0;
+}
+
+init_window(WIDTH, HEIGHT, "PONG");
+
+confection handle_input(player) {
+    if (is_key_down("down")) {
+        player.y = player.y + SPEED;
+    } elif (is_key_down("up")) {
+        player.y = player.y - SPEED;
+    }
+}
+
+confection reset() {
+    ball.x = WIDTH / 2 - ball.w / 2;
+    ball.y = HEIGHT / 2 - ball.h / 2;
+    ball_vel.x = BALL_SPEED;
+    ball_vel.y = BALL_SPEED;
+}
+
+confection clamp_paddle(p) {
+    if (p.y < 0) {p.y = 0;}
+    if (p.y + p.h > HEIGHT) {p.y = HEIGHT - p.h;}
+}
+
+let ball = new Rect();
+ball.w = 18.0;
+ball.h = 18.0;
+ball.x = WIDTH / 2 - ball.w / 2;
+ball.y = HEIGHT / 2 - ball.h / 2;
+
+let ball_vel = new Vec2();
+ball_vel.x = BALL_SPEED;
+ball_vel.y = BALL_SPEED;
+
+let ai = new Rect();
+ai.w = 20;
+ai.h = 100;
+ai.x = 10;
+ai.y = HEIGHT / 2 - ai.h / 2;
+
+let paddle2 = new Rect();
+paddle2.w = 20;
+paddle2.h = 100;
+paddle2.x = 770;
+paddle2.y = HEIGHT / 2 - paddle2.h / 2;
+
+let player_score = 0;
+let ai_score = 0;
+
+while (!window_should_close()) {
+    # input
+    handle_input(paddle2);
+
+    # update
+    ball.x = ball.x + ball_vel.x;
+    ball.y = ball.y + ball_vel.y;
+
+    if (ball.y < 0) {
+        ball.y = 0;
+        ball_vel.y = abs(ball_vel.y);
+    }
+    if (ball.y + ball.h > HEIGHT) {
+        ball.y = HEIGHT - ball.h;
+        ball_vel.y = -abs(ball_vel.y);
+    }
+
+    # hits the edge
+    if (ball.x + ball.w > WIDTH) {reset();ai_score = ai_score + 1;}
+    if (ball.x < 0) {reset(); player_score = player_score + 1;}
+
+    # ball paddle collisions
+    if (overlaps(ai, ball)) {
+        if (ball_vel.x < 0) {
+            ball_vel.x = BALL_SPEED;
+            let b_center = ball.y + ball.h / 2;
+            let a_center = ai.y + ai.h / 2;
+            ball_vel.y = (b_center - (a_center)) / (ai.h / 2) * BALL_SPEED * 2;
+        }
+    }
+    elif (overlaps(paddle2, ball)) {
+        if (ball_vel.x > 0) {
+            ball_vel.x = -BALL_SPEED;
+            let b_center = ball.y + ball.h / 2;
+            let a_center = paddle2.y + paddle2.h / 2;
+            ball_vel.y = (b_center - (a_center)) / (ai.h / 2) * BALL_SPEED * 2;
+        }
+    }
+    # program the ai
+    if (ball.y + ball.h / 2 < ai.y + ai.h / 2) {
+        ai.y = ai.y - SPEED;
+    } else {
+        ai.y = ai.y + SPEED;
+    }
+
+    # clamp paddle position
+    clamp_paddle(ai);
+    clamp_paddle(paddle2);
+
+    # drawing
+    begin_drawing();
+    clear_background("white");
+
+    draw_circle(ball.x, ball.y, ball.w / 2, "yellow");
+    draw_rectangle(ai.x, ai.y, ai.w, ai.h, "red");
+    draw_rectangle(paddle2.x, paddle2.y, paddle2.w, paddle2.h, "blue");
+
+    # draw score
+    draw_text(player_score + "", WIDTH / 2 + 15, HEIGHT / 2 - 10, 20, "maroon");
+    draw_text(ai_score + "", WIDTH / 2 - 15, HEIGHT / 2 - 10, 20, "maroon");
+
+    end_drawing();
+}
+close_window();

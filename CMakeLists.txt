@@ -25,11 +25,15 @@ add_executable(${PROJECT_NAME}
     src/runtime/memory.cpp
     src/runtime/runtime.cpp
     src/runtime/scope.cpp
+    src/runtime/graphics.cpp
     src/util/file.cpp
     src/util/error.cpp
 )
 
 include(FetchContent)
+
+# fmt
+
 FetchContent_Declare(
     fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
@@ -38,7 +42,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(fmt)
 target_link_libraries(choco PRIVATE fmt::fmt)
 
+# Raylib
+FetchContent_Declare(
+    raylib
+    GIT_REPOSITORY https://github.com/raysan5/raylib.git
+    GIT_TAG 5.5
+)
+FetchContent_MakeAvailable(raylib)
+target_link_libraries(choco PRIVATE raylib)
 
+
+# GTEST
 
 FetchContent_Declare(
     googletest

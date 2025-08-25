@@ -15,8 +15,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 include_directories("src/")
 
-add_executable(${PROJECT_NAME}
-    src/main.cpp
+set(SRC 
     src/token.cpp
     src/parser.cpp
     src/lexer.cpp
@@ -29,6 +28,8 @@ add_executable(${PROJECT_NAME}
     src/util/file.cpp
     src/util/error.cpp
 )
+
+add_executable(${PROJECT_NAME} src/main.cpp ${SRC})
 
 include(FetchContent)
 
@@ -67,11 +68,13 @@ enable_testing()
 add_executable(
     tests
     tests/test.cpp
+    ${SRC}
 )
 target_link_libraries(
     tests 
     PRIVATE GTest::gtest_main
     PRIVATE fmt::fmt
+    PRIVATE raylib
 )
 
 

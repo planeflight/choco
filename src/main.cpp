@@ -1,7 +1,5 @@
 #include <fmt/core.h>
-#include <raylib.h>
 
-#include <iostream>
 #include <string>
 #include <vector>
 

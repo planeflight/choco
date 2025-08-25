@@ -1,0 +1,73 @@
+
+confection find(array, num) {
+    let i = 0;
+    let s = len(array);
+    while (i < s) {
+        if (get(array, i) == num) {
+            gift i;
+        }
+        i = i + 1;
+    }
+    gift -1;
+}
+
+confection evaluate(n) {
+    if (n < 5) {
+        gift n * n * n - 1 / 9 * n * n + n;
+    }
+    gift n;
+}
+
+let my_array = [];
+let i = 0;
+while (i < 10) {
+    let result = evaluate(i);
+    print(result);
+    append(my_array, result);
+    i = i + 1;
+}
+print(my_array);
+
+let idx = find(my_array, 8);
+if (idx != -1) {
+    print("found 8 at index " + idx);
+}
+idx = find(my_array, -2);
+if (idx == -1)  {
+    print("didn't find -2");
+}
+
+box Cat {
+    let name = "Steve";
+    let age = 4;
+}
+
+confection say_hi(c) {
+    print("HI! My name is " + c.name + " and I'm " + c.age + " years old!");
+}
+
+let steve = new Cat();
+let anna = new Cat();
+anna.name = "Anna";
+anna.age = 8;
+
+say_hi(steve);
+say_hi(anna);
+if (steve.age < anna.age) {
+    print("HAHA! Anna is older than Steve!");
+} elif (steve.age > anna.age) {
+    print("HAHA! Steve is older than Anna!");
+} else {
+    print("HAHA! Steve is as old as Anna!");
+}
+
+let steve_ref = steve;
+steve_ref.name = "Steve Copy";
+say_hi(steve);
+say_hi(steve_ref);
+
+let idx_copy = idx;
+print(idx);
+idx_copy = 5;
+print(idx_copy);
+

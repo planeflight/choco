@@ -1,0 +1,29 @@
+# random expressions
+print(5 > 9);
+print(3 < 9);
+print(5 * -4 / -2);
+print(round(7.890));
+print(round(7.890) == 8 && ceil(7.890) == 8);
+print(floor(-92.09));
+
+# or testing
+print(true || 3 < 4);
+print(true || 3 > 4);
+print(false || 3 < 4);
+print(false || 3 > 4);
+
+# and testing
+print(true && 3 < 4);
+print(true && 3 > 4);
+print(false && 3 < 4);
+print(false && 3 > 4);
+
+# not testing
+print(!(4 > 3));
+print(!(4 < 3));
+
+# string concatenation
+print("hello " + "there");
+print("hello " + 5.3);
+print("hello " + true);
+print("hello " + [3, 4, 5]);

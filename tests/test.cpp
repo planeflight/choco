@@ -1,33 +1,19 @@
-#include <fmt/os.h>
+#include <fmt/base.h>
 #include <gtest/gtest.h>
 
-#include <memory>
 #include <string>
 
 #include "lexer.hpp"
 #include "parser.hpp"
 #include "runtime/interpreter.hpp"
+#include "util/file.hpp"
 
-std::string source1 = "(-5 + -3) - 5 * -2";
-std::string source2 = "8 * 3";
-std::string source3 = "-2 + 3";
-
-/*class InterpreterTest : public testing::Test {
+// Far from the most useful and thorough tests
+class InterpreterTest : public testing::Test {
   public:
-    InterpreterTest() {
-        lexer1 = std::make_unique<Lexer>(source1);
-        lexer2 = std::make_unique<Lexer>(source2);
-        lexer3 = std::make_unique<Lexer>(source3);
-        lexer1->retokenize();
-        lexer2->retokenize();
-        lexer3->retokenize();
+    InterpreterTest() : interpreter() {}
 
-        parser1 = std::make_unique<Lexer>(tokenize(lexer1.get()));
-        parser2 = std::make_unique<Lexer>(tokenize(lexer2.get()));
-        parser3 = std::make_unique<Lexer>(tokenize(lexer3.get()));
-    }
-
-  private:
+  protected:
     std::vector<Token> tokenize(Lexer *lexer) {
         lexer->retokenize();
         // create the list of tokens
@@ -40,15 +26,26 @@ std::string source3 = "-2 + 3";
         tokens.push_back(token); // add the end token
         return tokens;
     }
+    std::string run_and_capture(const std::string &filename) {
+        testing::internal::CaptureStdout();
+        Lexer lexer(load_file(filename));
+        const auto &tokens = tokenize(&lexer);
+        Parser parser(tokens);
+        interpreter.eval(parser.parse());
+        return testing::internal::GetCapturedStdout();
+    }
 
-    std::unique_ptr<Lexer> lexer1, lexer2, lexer3;
-    std::unique_ptr<Parser> parser1, parser2, parser3;
     Interpreter interpreter;
-};*/
+};
 
-// TEST_F(InterpreterTest, CheckExpressionEvaluation) {
-//     fmt::ostream out = fmt::output_file("tests/output/out.txt");
-//     for (int ln = 0; ln < 4; ++ln) {
-//         out.print("line {}\n", ln);
-//     }
-// }
+// WARN: basically useless, but comment out whatever file(s) to test 1 by 1.
+// This was the only way I could get GTest to not throw a fatal error about
+// multiple stdout capturers.
+TEST_F(InterpreterTest, CheckArrayStrings) {
+    EXPECT_EQ(load_file("./tests/out/array_strings.output"),
+              run_and_capture("./tests/cases/array_strings.choco"));
+    EXPECT_EQ(load_file("./tests/out/expression.output"),
+              run_and_capture("./tests/cases/expression.choco"));
+    EXPECT_EQ(load_file("./tests/out/loop_func_struct.output"),
+              run_and_capture("./tests/cases/loop_func_struct.choco"));
+}

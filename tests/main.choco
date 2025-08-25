@@ -32,11 +32,7 @@ print(countries);
 let dude = new Person();
 let res = hi(dude);
 print("We were gifted with:  " + res);
-
 let dude2 = dude;
-dude2.name = "Adam";
-hi(dude);
-hi(dude2);
 
 print("WHILE LOOP!!");
 

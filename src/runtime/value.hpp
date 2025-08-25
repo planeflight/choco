@@ -1,6 +1,7 @@
 #ifndef VALUE_HPP
 #define VALUE_HPP
 
+#include <cmath>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -119,8 +120,12 @@ inline std::string literal_to_string(LiteralValue &value) {
             return v.value ? "true" : "false";
         }
         case ValueType::NUMBER: {
-            auto &v = static_cast<NumValue &>(value);
-            return std::to_string(v.value);
+            auto &v = static_cast<NumValue &>(value).value;
+            std::string num = std::to_string(v);
+            if (std::round(v) == v) {
+                num = std::to_string((int)v);
+            }
+            return num;
         }
         case ValueType::STRING: {
             auto &v = static_cast<StringValue &>(value);

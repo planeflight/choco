@@ -15,9 +15,10 @@ class Interpreter {
     Interpreter();
     void eval(const std::vector<uptr<Statement>> &ast);
 
-  private:
+    // open for testing
     LiteralValue *evaluate(Statement *statement, Scope *scope);
 
+  private:
     // statements
     LiteralValue *evaluate_variable_declaration(VariableDeclaration *v,
                                                 Scope *scope);

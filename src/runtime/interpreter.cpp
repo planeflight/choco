@@ -243,6 +243,7 @@ LiteralValue *Interpreter::evaluate_function_call(CallExpr *s, Scope *scope) {
         }
         if (container->type == ValueType::STRING) {
             static_cast<StringValue *>(container)->value.pop_back();
+            return nullptr;
         }
         throw Error(Error::INVALID_ARGUMENT_ERROR,
                     "Expected list or string type.");
@@ -250,8 +251,8 @@ LiteralValue *Interpreter::evaluate_function_call(CallExpr *s, Scope *scope) {
     if (s->callee->symbol == "insert") {
         expect_args(args, 3);
         auto container = args[0];
-        auto elem = args[1];
         int idx = (int)as_double(args[1]);
+        auto elem = args[2];
         if (container->type == ValueType::LIST) {
             auto &vec = static_cast<ListValue *>(container)->value;
             vec.insert(vec.begin() + idx, elem);
@@ -308,7 +309,9 @@ LiteralValue *Interpreter::evaluate_function_call(CallExpr *s, Scope *scope) {
         // evaluate the function with the given parameters
         for (const auto &s : function->statements) {
             result = evaluate(s.get(), &local_scope);
-            if (result) return result;
+            if (result) {
+                return result;
+            }
         }
         return nullptr;
     }
@@ -378,7 +381,8 @@ LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s, Scope *scope) {
         Scope new_scope;
         new_scope.parent = scope;
         for (const auto &s : s->statements) {
-            evaluate(s.get(), &new_scope);
+            auto v = evaluate(s.get(), &new_scope);
+            if (v) return v;
         }
     } else {
         for (const auto &elif : s->elif_statements) {
@@ -391,7 +395,8 @@ LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s, Scope *scope) {
 
                 run_else = false;
                 for (const auto &s : elif->statements) {
-                    evaluate(s.get(), &new_scope);
+                    auto v = evaluate(s.get(), &new_scope);
+                    if (v) return v;
                 }
                 break;
             }
@@ -400,7 +405,8 @@ LiteralValue *Interpreter::evaluate_if_statement(IfExpr *s, Scope *scope) {
             Scope new_scope;
             new_scope.parent = scope;
             for (const auto &s : s->else_statements) {
-                evaluate(s.get(), &new_scope);
+                auto v = evaluate(s.get(), &new_scope);
+                if (v) return v;
             }
         }
     }
@@ -416,7 +422,8 @@ LiteralValue *Interpreter::evaluate_while_statement(WhileExpr *s,
         new_scope.parent = scope;
         // TODO: break/continue
         for (const auto &s : s->statements) {
-            evaluate(s.get(), &new_scope);
+            auto v = evaluate(s.get(), &new_scope);
+            if (v) return v;
         }
         // recalculate eval
         eval =
@@ -508,6 +515,8 @@ LiteralValue *Interpreter::evaluate_binary_expr(BinaryExpr *v, Scope *scope) {
             res_bool->value = lval->value >= rval->value;
         } else if (v->op == TokenType::EQUALS) {
             res_bool->value = lval->value == rval->value;
+        } else if (v->op == TokenType::NOT_EQUAL) {
+            res_bool->value = lval->value != rval->value;
         } else {
             throw Error(
                 Error::TYPE_ERROR,

@@ -1,0 +1,24 @@
+
+# arrays first
+let array = [0, -1, 56, 9, 10];
+print(array);
+print(len(array));
+print(get(array, 4));
+pop(array);
+print(array);
+append(array, 100);
+print(array);
+insert(array, 0, -100);
+print(array);
+
+# strings next
+let string = "hello";
+print(string);
+print(len(string));
+print(get(string, 2));
+pop(string);
+print(string);
+append(string, "o, there");
+print(string);
+insert(string, 0, "why, ");
+print(string);
